@@ -1,0 +1,9 @@
+[submodule "external/sdsl-lite"]
+	path = external/sdsl-lite
+	url = https://github.com/xxsds/sdsl-lite.git
+[submodule "external/dynet"]
+	path = external/dynet
+	url = https://github.com/clab/dynet.git
+[submodule "eigen3"]
+	path = external/eigen-git-mirror
+	url = https://github.com/eigenteam/eigen-git-mirror.git
