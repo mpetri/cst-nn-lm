@@ -55,6 +55,7 @@ struct language_model {
 	}
 
 	dynet::Expression build_train_graph(dynet::ComputationGraph& cg,train_instance_t& instance) {
+		auto start = std::chrono::high_resolution_clock::now();
 		// Initialize the RNN for a new computation graph
 		rnn.new_graph(cg);
 		// Prepare for new sequence (essentially set hidden states to 0)
@@ -72,6 +73,8 @@ struct language_model {
 		dynet::Expression i_r_t = i_bias + i_R * i_y_t;
 		dynet::Expression i_true = dynet::input(cg, {(unsigned int)instance.dist.size()}, instance.dist);
 		dynet::Expression i_error = dynet::transpose(i_true) * dynet::log_softmax(i_r_t);
+		auto end = std::chrono::high_resolution_clock::now();
+		CNLOG << "BUILD TRAIN GRAPH " << " - " << (end-start).count() << "s";
 		return i_error;
 	}
 };
@@ -123,7 +126,6 @@ add_node(const vocab_t& vocab,const cst_type& cst,pq_type& pq,const pq_node_type
 			depth++;
 		}
 	}
-	CNLOG << "ADD NODE " << print_pq_node(new_node,vocab,cst);
 	pq.push(new_node);
 }
 
@@ -131,8 +133,8 @@ add_node(const vocab_t& vocab,const cst_type& cst,pq_type& pq,const pq_node_type
 train_instance_t
 create_instance(const cst_type& cst,pq_type& pq,const vocab_t& vocab)
 {
+	auto start = std::chrono::high_resolution_clock::now();
 	auto top_node = pq.top(); pq.pop();
-	CNLOG << "PROCESS NODE " << print_pq_node(top_node,vocab,cst);
 	train_instance_t new_instance;
 	new_instance.dist.resize(vocab.size());
 	new_instance.prefix = top_node.prefix;
@@ -150,6 +152,10 @@ create_instance(const cst_type& cst,pq_type& pq,const vocab_t& vocab)
 			add_node(vocab,cst,pq,top_node,child,tok);
 		}
 	}
+	auto end = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> diff = end-start;
+	CNLOG << "PROCESS NODE " << print_pq_node(top_node,vocab,cst) 
+		  << " - " << (end-start).count() << "s";
 	return new_instance;
 }
 
@@ -184,10 +190,13 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 			errors[cur++] = lm.build_train_graph(cg,instance);
 
 			if(cur == batch_size) {
+				auto start = std::chrono::high_resolution_clock::now();
 				auto loss_expr = dynet::sum(errors);
 				cg.backward(loss_expr);
        			trainer.update();
 				cur = 0;
+				auto end = std::chrono::high_resolution_clock::now();
+				CNLOG << "BACKWARD/UPDATE " << " - " << (end-start).count() << "s";
 			}
 		}
 

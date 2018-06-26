@@ -11,7 +11,7 @@
 
 #include "sdsl/suffix_trees.hpp"
 
-using cst_type = sdsl::cst_sct3<sdsl::csa_wt_int<>>;
+using cst_type = sdsl::cst_sct3<sdsl::csa_wt_int<sdsl::wt_int<>,4,4>>;
 
 namespace constants {
 	std::string CST_FILE = "cst.sdsl";
