@@ -17,12 +17,12 @@ po::variables_map parse_args(int argc,char** argv)
 	desc.add_options()
 	    ("help", "produce help message")
 	    ("path", po::value<std::string>()->required(), "data path")
-	    ("vocab_size", po::value<size_t>()->default_value(defaults::VOCAB_SIZE), "vocab size")
-		("layers", po::value<size_t>()->default_value(defaults::LAYERS), "layers of the rnn")
-		("input_dim", po::value<size_t>()->default_value(defaults::INPUT_DIM), "input embedding size")
-		("hidden_dim", po::value<size_t>()->default_value(defaults::HIDDEN_DIM), "hidden size")
-	    ("epochs", po::value<size_t>()->default_value(defaults::EPOCHS), "num epochs")
-	    ("batch_size", po::value<size_t>()->default_value(defaults::BATCH_SIZE), "batch size")
+	    ("vocab_size", po::value<uint32_t>()->default_value(defaults::VOCAB_SIZE), "vocab size")
+		("layers", po::value<uint32_t>()->default_value(defaults::LAYERS), "layers of the rnn")
+		("input_dim", po::value<uint32_t>()->default_value(defaults::INPUT_DIM), "input embedding size")
+		("hidden_dim", po::value<uint32_t>()->default_value(defaults::HIDDEN_DIM), "hidden size")
+	    ("epochs", po::value<uint32_t>()->default_value(defaults::EPOCHS), "num epochs")
+	    ("batch_size", po::value<uint32_t>()->default_value(defaults::BATCH_SIZE), "batch size")
 	;
 
 	po::variables_map args;

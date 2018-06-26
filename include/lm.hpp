@@ -24,10 +24,10 @@ struct train_instance_t {
 
 struct language_model {
 	dynet::ParameterCollection model;
-	unsigned int LAYERS;
-	unsigned int INPUT_DIM;
-	unsigned int HIDDEN_DIM;
-	unsigned int VOCAB_SIZE;
+	uint32_t LAYERS;
+	uint32_t INPUT_DIM;
+	uint32_t HIDDEN_DIM;
+	uint32_t VOCAB_SIZE;
 	dynet::LookupParameter p_c;
 	dynet::Parameter p_R;
 	dynet::Parameter p_bias;
@@ -37,9 +37,9 @@ struct language_model {
 	dynet::LSTMBuilder rnn;
 
 	language_model(const vocab_t& vocab,args_t& args) {
-		LAYERS = args["layers"].as<unsigned int>();
-		INPUT_DIM = args["input_dim"].as<unsigned int>();
-		HIDDEN_DIM = args["hidden_dim"].as<unsigned int>();
+		LAYERS = args["layers"].as<uint32_t>();
+		INPUT_DIM = args["input_dim"].as<uint32_t>();
+		HIDDEN_DIM = args["hidden_dim"].as<uint32_t>();
 		VOCAB_SIZE = vocab.size();
 		CNLOG << "LM parameters ";
 		CNLOG << "\tlayers = " << LAYERS;
