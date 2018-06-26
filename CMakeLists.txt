@@ -49,6 +49,5 @@ target_link_libraries(create_cst_nn_lm
   dynet
   divsufsort
   divsufsort64
-  tinyutf8
   )
 

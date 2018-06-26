@@ -1,5 +1,7 @@
 #pragma once
 
+#include <locale>
+
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
@@ -23,5 +25,6 @@ void init_logging()
     boost::log::core::get()->remove_all_sinks();
     boost::log::core::get()->add_global_attribute("TimeStamp", boost::log::attributes::local_clock());
     logging::add_console_log(std::cout,keywords::format = "[%TimeStamp%]: %Message%");
+    std::cout.imbue( std::locale( "C.UTF-8" ) ) ; 
 }
 
