@@ -41,6 +41,11 @@ struct language_model {
 		INPUT_DIM = args["input_dim"].as<unsigned int>();
 		HIDDEN_DIM = args["hidden_dim"].as<unsigned int>();
 		VOCAB_SIZE = vocab.size();
+		CNLOG << "LM parameters ";
+		CNLOG << "\tlayers = " << LAYERS;
+		CNLOG << "\tinput_dim = " << INPUT_DIM;
+		CNLOG << "\thidden_dim = " << HIDDEN_DIM;
+		CNLOG << "\tvocab size = " << VOCAB_SIZE;
 
 		// Add embedding parameters to the model
 		p_c = model.add_lookup_parameters(VOCAB_SIZE, {INPUT_DIM});
