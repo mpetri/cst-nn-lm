@@ -84,7 +84,13 @@ struct vocab_t {
 		}
 		return itr->second;
 	}
-
+	std::string inverse_lookup(uint32_t id) const {
+		auto itr = int2tok.find(id);
+		if(itr == int2tok.end()) {
+			return "<unk>";
+		}
+		return itr->second;
+	}
 	size_t size() const {
 		return tok2int.size();
 	}

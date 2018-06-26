@@ -82,6 +82,22 @@ struct pq_node_type {
 
 using pq_type = std::priority_queue<pq_node_type>;
 
+std::string
+print_pq_node(pq_node_type& node,const vocab_t& vocab,const cst_type& cst)
+{
+	std::string node_str = "<";
+	node_str += "prio=" + std::to_string(node.priority) + ",";
+	node_str += "ids=[";
+	for(size_t i=0;i<node.prefix.size()-1;i++)
+		node_str += std::to_string(node.prefix[i]) + ",";
+	node_str += std::to_string(node.prefix.back()) + "],";
+	node_str += "toks=[";
+	for(size_t i=0;i<node.prefix.size()-1;i++)
+		node_str += vocab.inverse_lookup(node.prefix[i]) + ",";
+	node_str += vocab.inverse_lookup(node.prefix.back()) + "]>";
+	return node_str;
+}
+
 void
 add_node(const vocab_t& vocab,const cst_type& cst,pq_type& pq,const pq_node_type& parent,const cst_node_type& cur_node,uint32_t tok)
 {
@@ -102,6 +118,7 @@ add_node(const vocab_t& vocab,const cst_type& cst,pq_type& pq,const pq_node_type
 			depth++;
 		}
 	}
+	CNLOG << "ADD NODE " << print_pq_node(new_node,vocab,cst);
 	pq.push(new_node);
 }
 
@@ -110,7 +127,6 @@ train_instance_t
 create_instance(const cst_type& cst,pq_type& pq,const vocab_t& vocab)
 {
 	auto top_node = pq.top(); pq.pop();
-
 	train_instance_t new_instance;
 	new_instance.dist.resize(vocab.size());
 	new_instance.prefix = top_node.prefix;
@@ -119,7 +135,6 @@ create_instance(const cst_type& cst,pq_type& pq,const vocab_t& vocab)
 
 	if(node_size == 1) {
 		new_instance.dist[vocab.stop_sent_tok] = 1;
-
 	} else {
 		auto parent_depth = cst.depth(top_node.cst_node);
 		for(const auto& child : cst.children(top_node.cst_node)) {
