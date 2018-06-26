@@ -74,7 +74,8 @@ struct language_model {
 		dynet::Expression i_true = dynet::input(cg, {(unsigned int)instance.dist.size()}, instance.dist);
 		dynet::Expression i_error = dynet::transpose(i_true) * dynet::log_softmax(i_r_t);
 		auto end = std::chrono::high_resolution_clock::now();
-		CNLOG << "BUILD TRAIN GRAPH " << " - " << (end-start).count() << "s";
+		std::chrono::duration<double> diff = end-start;
+		CNLOG << "BUILD TRAIN GRAPH " << " - " << (diff).count() << "s";
 		return i_error;
 	}
 };
@@ -156,7 +157,7 @@ create_instance(const cst_type& cst,pq_type& pq,const vocab_t& vocab)
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> diff = end-start;
 	CNLOG << "PROCESS NODE " << print_pq_node(top_node,vocab,cst) 
-		  << " - " << (end-start).count() << "s";
+		  << " - " << (diff).count() << "s";
 	return new_instance;
 }
 
@@ -197,7 +198,8 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
        			trainer.update();
 				cur = 0;
 				auto end = std::chrono::high_resolution_clock::now();
-				CNLOG << "BACKWARD/UPDATE " << " - " << (end-start).count() << "s";
+				std::chrono::duration<double> diff = end-start;
+				CNLOG << "BACKWARD/UPDATE " << " - " << (diff).count() << "s";
 			}
 		}
 
