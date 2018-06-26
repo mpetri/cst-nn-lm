@@ -133,6 +133,7 @@ struct data_loader {
 		std::ifstream input(train_file);
 	    for (std::string line; std::getline(input, line); ) {
 	    	auto toks = tokenize_line(line);
+	    	if(toks.size() < 2) continue;
 	    	for(const auto& tok : toks) v.add_token(tok);
 		}
 		v.freeze();
@@ -146,6 +147,7 @@ struct data_loader {
 		std::ifstream input(train_file);
 	    for (std::string line; std::getline(input, line); ) {
 	    	auto toks = tokenize_line(line);
+	    	if(toks.size() < 2) continue;
 	    	corpus.text.push_back(corpus.vocab.start_sent_tok);
 	    	for(const auto& tok : toks) {
 	    		corpus.text.push_back(corpus.vocab.lookup(tok));

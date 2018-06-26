@@ -81,7 +81,7 @@ struct pq_node_type {
 	cst_node_type cst_node;
 	size_t priority;
 	bool operator<(const pq_node_type& other) const {
-		return priority > other.priority;
+		return priority < other.priority;
 	}
 };
 
@@ -132,6 +132,7 @@ train_instance_t
 create_instance(const cst_type& cst,pq_type& pq,const vocab_t& vocab)
 {
 	auto top_node = pq.top(); pq.pop();
+	CNLOG << "PROCESS NODE " << print_pq_node(top_node,vocab,cst);
 	train_instance_t new_instance;
 	new_instance.dist.resize(vocab.size());
 	new_instance.prefix = top_node.prefix;
