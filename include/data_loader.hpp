@@ -116,7 +116,7 @@ struct data_loader {
 	{
 		boost::algorithm::trim(line);
 		std::vector<std::string> toks;
-		return boost::algorithm::split(toks,trimmed_line,boost::is_any_of("\t "),boost::token_compress_on);
+		return boost::algorithm::split(toks,line,boost::is_any_of("\t "),boost::token_compress_on);
 	}
 
 	static vocab_t create_or_load_vocab(std::string path,args_t& args)
