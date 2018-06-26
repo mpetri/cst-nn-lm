@@ -149,7 +149,8 @@ create_instance(const cst_type& cst,pq_type& pq,const vocab_t& vocab)
 			auto tok = cst.edge(child,parent_depth+1);
 			double size = cst.size(child);
 			new_instance.dist[tok] = size/node_size;
-			add_node(vocab,cst,pq,top_node,child,tok);
+			if(tok != vocab.start_sent_tok)
+				add_node(vocab,cst,pq,top_node,child,tok);
 		}
 	}
 	auto end = std::chrono::high_resolution_clock::now();
