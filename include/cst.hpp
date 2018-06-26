@@ -10,8 +10,9 @@
 #include <boost/filesystem.hpp>
 
 #include "sdsl/suffix_trees.hpp"
+#include "sdsl/wavelet_trees.hpp"
 
-using cst_type = sdsl::cst_sct3<sdsl::wt_huff_int<sdsl::wt_int<>,2,2>>;
+using cst_type = sdsl::cst_sct3<sdsl::csa_wt_int<sdsl::wt_huff_int<>,2,2>>;
 
 namespace constants {
 	std::string CST_FILE = "cst.sdsl";
