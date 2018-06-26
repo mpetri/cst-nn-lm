@@ -113,8 +113,9 @@ struct data_loader {
 	static std::vector<std::string>
 	tokenize_line(std::string& line)
 	{
+		std::string trimmed_line = boost::algorithm::trim(line);
 		std::vector<std::string> toks;
-		return boost::algorithm::split(toks,line,boost::is_any_of("\t "),boost::token_compress_on);
+		return boost::algorithm::split(toks,trimmed_line,boost::is_any_of("\t "),boost::token_compress_on);
 	}
 
 	static vocab_t create_or_load_vocab(std::string path,args_t& args)
@@ -142,7 +143,7 @@ struct data_loader {
 
 	static void parse_text(corpus_t& corpus)
 	{
-		CNLOG << "\tprase input text";
+		CNLOG << "\tparse input text";
 		auto train_file = corpus.path + "/" + constants::TRAIN_FILE;
 		std::ifstream input(train_file);
 	    for (std::string line; std::getline(input, line); ) {

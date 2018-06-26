@@ -7,3 +7,6 @@
 [submodule "eigen3"]
 	path = external/eigen-git-mirror
 	url = https://github.com/eigenteam/eigen-git-mirror.git
+[submodule "external/tinyutf8"]
+	path = external/tinyutf8
+	url = https://github.com/DuffsDevice/tinyutf8.git
