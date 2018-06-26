@@ -27,7 +27,7 @@ po::variables_map parse_args(int argc,char** argv)
 
 	po::variables_map args;
 	try {
-		po::store(po::parse_command_line(argc, argv, desc), args);
+		po::store(po::command_line_parser(argc, argv).options(desc).allow_unregistered().run(), args);
 		po::notify(args);
 	} catch(std::exception& e) {
 		std::cerr << "Error:" << e.what() << std::endl;
