@@ -11,6 +11,8 @@
 
 #include <sdsl/int_vector.hpp>
 
+#include "tinyutf8.h"
+
 namespace po = boost::program_options;
 using args_t = po::variables_map;
 
@@ -21,8 +23,8 @@ namespace constants {
 	std::string VOCAB_FILE = "vocab.txt";
 }
 
-using str2u32_type = std::unordered_map<std::string,uint32_t>;
-using u32tostr_type = std::unordered_map<uint32_t,std::string>;
+using str2u32_type = std::unordered_map<utf8_string,uint32_t>;
+using u32tostr_type = std::unordered_map<uint32_t,utf8_string>;
 
 struct vocab_t {
 	size_t max_size;
@@ -41,7 +43,7 @@ struct vocab_t {
 		start_sent_tok = add_token("<s>");
 		unk_tok = add_token("<unk>");
 	}
-	uint32_t add_token(const std::string& tok) {
+	uint32_t add_token(const utf8_string& tok) {
 		auto itr = tok2int.find(tok);
 		uint32_t tok_id = tok2int.size();
 		if(itr == tok2int.end()) {
@@ -81,14 +83,14 @@ struct vocab_t {
 		tok_freqs.clear();
 		CNLOG << "\t\tfinal unique tokens = " << tok2int.size();
 	}
-	uint32_t lookup(const std::string& tok) const {
+	uint32_t lookup(const utf8_string& tok) const {
 		auto itr = tok2int.find(tok);
 		if(itr == tok2int.end()) {
 			return unk_tok;
 		}
 		return itr->second;
 	}
-	std::string inverse_lookup(uint32_t id) const {
+	utf8_string inverse_lookup(uint32_t id) const {
 		auto itr = int2tok.find(id);
 		if(itr == int2tok.end()) {
 			return "<unk>";
@@ -110,11 +112,11 @@ struct corpus_t {
 };
 
 struct data_loader {
-	static std::vector<std::string>
-	tokenize_line(std::string& line)
+	static std::vector<utf8_string>
+	tokenize_line(utf8_string& line)
 	{
-		std::string trimmed_line = boost::algorithm::trim(line);
-		std::vector<std::string> toks;
+		boost::algorithm::trim(utf8_string);
+		std::vector<utf8_string> toks;
 		return boost::algorithm::split(toks,trimmed_line,boost::is_any_of("\t "),boost::token_compress_on);
 	}
 
@@ -132,7 +134,7 @@ struct data_loader {
 
 		auto train_file = path + "/" + constants::TRAIN_FILE;
 		std::ifstream input(train_file);
-	    for (std::string line; std::getline(input, line); ) {
+	    for (utf8_string line; std::getline(input, line); ) {
 	    	auto toks = tokenize_line(line);
 	    	if(toks.size() < 2) continue;
 	    	for(const auto& tok : toks) v.add_token(tok);
@@ -146,7 +148,7 @@ struct data_loader {
 		CNLOG << "\tparse input text";
 		auto train_file = corpus.path + "/" + constants::TRAIN_FILE;
 		std::ifstream input(train_file);
-	    for (std::string line; std::getline(input, line); ) {
+	    for (utf8_string line; std::getline(input, line); ) {
 	    	auto toks = tokenize_line(line);
 	    	if(toks.size() < 2) continue;
 	    	corpus.text.push_back(corpus.vocab.start_sent_tok);

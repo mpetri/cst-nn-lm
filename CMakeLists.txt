@@ -40,7 +40,7 @@ add_subdirectory(external/sdsl-lite EXCLUDE_FROM_ALL)
 include_directories(${CMAKE_BINARY_DIR}/external/sdsl-lite/include/)
 include_directories(${CMAKE_BINARY_DIR}/external/sdsl-lite/external/libdivsufsort/include/)
 
-add_library(tinyutf8 ${CMAKE_SOURCE_DIR}/external/tinyutf8/lib/tinyutf8.cpp)
+add_library(tinyutf8 STATIC ${CMAKE_SOURCE_DIR}/external/tinyutf8/lib/tinyutf8.cpp)
 include_directories(${CMAKE_SOURCE_DIR}/external/tinyutf8/include/)
 
 #
