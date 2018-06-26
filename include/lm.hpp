@@ -90,16 +90,16 @@ using pq_type = std::priority_queue<pq_node_type>;
 std::string
 print_pq_node(pq_node_type& node,const vocab_t& vocab,const cst_type& cst)
 {
-	std::string node_str = "<";
-	node_str += "prio=" + std::to_string(node.priority) + ",";
-	node_str += "ids=[";
+	std::string node_str = u"<";
+	node_str += u"prio=" + std::to_string(node.priority) + u",";
+	node_str += u"ids=[";
 	for(size_t i=0;i<node.prefix.size()-1;i++)
-		node_str += std::to_string(node.prefix[i]) + ",";
-	node_str += std::to_string(node.prefix.back()) + "],";
-	node_str += "toks=[";
+		node_str += std::to_string(node.prefix[i]) + u",";
+	node_str += std::to_string(node.prefix.back()) + u"],";
+	node_str += u"toks=[";
 	for(size_t i=0;i<node.prefix.size()-1;i++)
-		node_str += vocab.inverse_lookup(node.prefix[i]) + ",";
-	node_str += vocab.inverse_lookup(node.prefix.back()) + "]>";
+		node_str += vocab.inverse_lookup(node.prefix[i]) + u",";
+	node_str += vocab.inverse_lookup(node.prefix.back()) + u"]>";
 	return node_str;
 }
 
