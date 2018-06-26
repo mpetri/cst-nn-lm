@@ -114,7 +114,7 @@ struct data_loader {
 	static std::vector<std::string>
 	tokenize_line(std::string& line)
 	{
-		std::string trimmed_line = boost::algorithm::trim(line);
+		boost::algorithm::trim(line);
 		std::vector<std::string> toks;
 		return boost::algorithm::split(toks,trimmed_line,boost::is_any_of("\t "),boost::token_compress_on);
 	}
@@ -149,7 +149,7 @@ struct data_loader {
 		auto train_file = corpus.path + "/" + constants::TRAIN_FILE;
 		std::ifstream input(train_file);
 		input.imbue( std::locale( "C.UTF-8" ) );
-	    for (utf8_string line; std::getline(input, line); ) {
+	    for (std::string line; std::getline(input, line); ) {
 	    	auto toks = tokenize_line(line);
 	    	if(toks.size() < 2) continue;
 	    	corpus.text.push_back(corpus.vocab.start_sent_tok);
