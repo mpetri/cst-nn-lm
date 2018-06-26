@@ -9,6 +9,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
 
+#include <sdsl/int_vector.hpp>
+
 namespace po = boost::program_options;
 using args_t = po::variables_map;
 
@@ -99,7 +101,7 @@ struct vocab_t {
 struct corpus_t {
 	std::string path;
 	vocab_t vocab;
-	std::vector<uint32_t> text;
+	sdsl::int_vector<32> text;
 	size_t num_tokens = 0;
 	size_t num_sentences = 0;
 	size_t num_oov = 0;
@@ -161,9 +163,9 @@ struct data_loader {
 		c.path = directory;
 		c.vocab = create_or_load_vocab(c.path,args);
 		parse_text(c);
-		CNLOG << "num tokens = " << c.num_tokens;
-		CNLOG << "num sentences = " << c.num_sentences;
-		CNLOG << "num oov = " << c.num_oov;
+		CNLOG << "\tnum tokens = " << c.num_tokens;
+		CNLOG << "\tnum sentences = " << c.num_sentences;
+		CNLOG << "\tnum oov = " << c.num_oov;
 		return c;
 	}
 };
