@@ -196,7 +196,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 				auto end = std::chrono::high_resolution_clock::now();
 				std::chrono::duration<double> diff = end-start;
 				CNLOG << "BACKWARD/UPDATE " << " - " << (diff).count() << "s";
-				cg = dynet::ComputationGraph();
+				cg.clear();
 			}
 		}
 
