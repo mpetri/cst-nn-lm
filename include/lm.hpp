@@ -55,7 +55,6 @@ struct language_model {
 	}
 
 	dynet::Expression build_train_graph(dynet::ComputationGraph& cg,train_instance_t& instance) {
-		auto start = std::chrono::high_resolution_clock::now();
 		// Initialize the RNN for a new computation graph
 		rnn.new_graph(cg);
 		// Prepare for new sequence (essentially set hidden states to 0)
@@ -73,9 +72,6 @@ struct language_model {
 		dynet::Expression i_r_t = i_bias + i_R * i_y_t;
 		dynet::Expression i_true = dynet::input(cg, {(unsigned int)instance.dist.size()}, instance.dist);
 		dynet::Expression i_error = dynet::transpose(i_true) * dynet::log_softmax(i_r_t);
-		auto end = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> diff = end-start;
-		CNLOG << "BUILD TRAIN GRAPH " << " - " << (diff).count() << "s";
 		return i_error;
 	}
 };

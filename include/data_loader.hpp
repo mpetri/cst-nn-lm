@@ -58,7 +58,7 @@ struct vocab_t {
 		std::sort(tok_freqs.begin(),tok_freqs.end(),[](const auto& a,const auto&b) {
 			return a.second > b.second;
 		});
-		CNLOG << "\tinitial unique tokens = " << tok2int.size();
+		CNLOG << "\t\tinitial unique tokens = " << tok2int.size();
 		tok2int.clear();
 		eof_tok = add_token("<eof>");
 		stop_sent_tok = add_token("</s>");
@@ -79,7 +79,7 @@ struct vocab_t {
 			int2tok[tok_id] = tok_str;
 		}
 		tok_freqs.clear();
-		CNLOG << "\tfinal unique tokens = " << tok2int.size();
+		CNLOG << "\t\tfinal unique tokens = " << tok2int.size();
 	}
 	uint32_t lookup(const std::string& tok) const {
 		auto itr = tok2int.find(tok);
@@ -119,7 +119,7 @@ struct data_loader {
 
 	static vocab_t create_or_load_vocab(std::string path,args_t& args)
 	{
-		CNLOG << "create vocabulary";
+		CNLOG << "\tcreate vocabulary";
 		auto threshold = args["vocab_size"].as<uint32_t>();
 		vocab_t v;
 		v.max_size = threshold;
@@ -142,7 +142,7 @@ struct data_loader {
 
 	static void parse_text(corpus_t& corpus)
 	{
-		CNLOG << "prase input text";
+		CNLOG << "\tprase input text";
 		auto train_file = corpus.path + "/" + constants::TRAIN_FILE;
 		std::ifstream input(train_file);
 	    for (std::string line; std::getline(input, line); ) {
@@ -167,9 +167,9 @@ struct data_loader {
 		c.path = directory;
 		c.vocab = create_or_load_vocab(c.path,args);
 		parse_text(c);
-		CNLOG << "\tnum tokens = " << c.num_tokens;
-		CNLOG << "\tnum sentences = " << c.num_sentences;
-		CNLOG << "\tnum oov = " << c.num_oov;
+		CNLOG << "\t\tnum tokens = " << c.num_tokens;
+		CNLOG << "\t\tnum sentences = " << c.num_sentences;
+		CNLOG << "\t\tnum oov = " << c.num_oov;
 		return c;
 	}
 };
