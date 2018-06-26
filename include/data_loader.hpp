@@ -58,6 +58,7 @@ struct vocab_t {
 		std::sort(tok_freqs.begin(),tok_freqs.end(),[](const auto& a,const auto&b) {
 			return a.second > b.second;
 		});
+		CNLOG << "\tinitial unique tokens = " << tok2int.size();
 		tok2int.clear();
 		eof_tok = add_token("<eof>");
 		stop_sent_tok = add_token("</s>");
@@ -78,6 +79,7 @@ struct vocab_t {
 			int2tok[tok_id] = tok_str;
 		}
 		tok_freqs.clear();
+		CNLOG << "\tfinal unique tokens = " << tok2int.size();
 	}
 	uint32_t lookup(const std::string& tok) const {
 		auto itr = tok2int.find(tok);
