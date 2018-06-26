@@ -120,7 +120,7 @@ struct data_loader {
 	static vocab_t create_or_load_vocab(std::string path,args_t& args)
 	{
 		CNLOG << "create vocabulary";
-		auto threshold = args["vocab_size"].as<size_t>();
+		auto threshold = args["vocab_size"].as<uint32_t>();
 		vocab_t v;
 		v.max_size = threshold;
 		// auto vocab_file = path + "/" + constants::VOCAB_FILE;

@@ -154,8 +154,8 @@ create_instance(const cst_type& cst,pq_type& pq,const vocab_t& vocab)
 
 language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 {
-	auto num_epochs = args["epochs"].as<size_t>();
-	auto batch_size = args["batch_size"].as<size_t>();
+	auto num_epochs = args["epochs"].as<uint32_t>();
+	auto batch_size = args["batch_size"].as<uint32_t>();
 	language_model lm(vocab,args);
 
 	dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
