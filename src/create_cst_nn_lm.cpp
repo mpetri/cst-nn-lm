@@ -52,8 +52,8 @@ int main(int argc,char** argv)
 	CNLOG << "load and parse data";
 	auto corpus = data_loader::load(args);
 
-	CNLOG << "build CST";
-	auto cst = build_cst(corpus,args);
+	CNLOG << "build or load CST";
+	auto cst = build_or_load_cst(corpus,args);
 
 	CNLOG << "create language model";
 	dynet::initialize(argc, argv);
