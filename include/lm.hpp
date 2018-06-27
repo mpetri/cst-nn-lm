@@ -74,6 +74,36 @@ struct language_model {
 		dynet::Expression i_error = dynet::transpose(i_true) * dynet::log_softmax(i_r_t);
 		return i_error;
 	}
+
+	dynet::Expression build_train_graph_batch(dynet::ComputationGraph& cg,std::vector<train_instance_t>& instances) {
+		// Initialize the RNN for a new computation graph
+		rnn.new_graph(cg);
+		// Prepare for new sequence (essentially set hidden states to 0)
+		rnn.start_new_sequence();
+		// Instantiate embedding parameters in the computation graph
+		// output -> word rep parameters (matrix + bias)
+		i_R = dynet::parameter(cg, p_R);
+		i_bias = dynet::parameter(cg, p_bias);
+
+		std::vector<uint32_t> cur_sym(instances.size());
+		for (size_t i = 0; i < instances.prefix.size()-1; ++i) {
+			for(size_t j=0;j<instances.size();j++) cur_sym[j] = instances[j].prefix[i];
+			dynet::Expression i_x_t = dynet::lookup(cg, p_c,cur_sym);
+			dynet::Expression i_y_t = rnn.add_input(i_x_t);
+		}
+		for(size_t j=0;j<instances.size();j++) cur_sym[j] = instances[j].prefix.back();
+		dynet::Expression i_x_t = dynet::lookup(cg, p_c,cur_sym);
+		dynet::Expression i_y_t = rnn.add_input(i_x_t);
+		dynet::Expression i_r_t = i_bias + i_R * i_y_t;
+
+		dynet::Expression i_error = 0;
+		dynet::Expression i_pred = dynet::log_softmax(i_r_t);
+		for(size_t j=0;j<instances.size();j++) {
+			dynet::Expression i_true = dynet::input(cg, {(unsigned int)instances[j].dist.size()}, instances[j].dist);
+			i_error = i_error + dynet::sum(dynet::transpose(i_true) * dynet::pick(i_pred,j));
+		}
+		return i_error;
+	}
 };
 
 struct pq_node_type {
@@ -152,7 +182,7 @@ create_instance(const cst_type& cst,pq_type& pq,const vocab_t& vocab)
 	}
 	auto end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> diff = end-start;
-	CNLOG << "PROCESS NODE " << print_pq_node(top_node,vocab,cst) 
+	CNLOG << "PROCESS NODE " << print_pq_node(top_node,vocab,cst)
 		  << " - " << (diff).count() << "s";
 	return new_instance;
 }
