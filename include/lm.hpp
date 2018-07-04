@@ -172,7 +172,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 			auto handle = std::async(std::launch::async,process_token_subtree,cst,vocab,thread,threshold);
 			results.push_back(handle);
 		}
-		for(const auto& e : results) {
+		for(auto& e : results) {
 			auto res = e.get();
 			instances.insert(instances.end(),res.begin(),res.end());
 		}
@@ -202,7 +202,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 			auto dist_itr = dists.begin();
 			size_t dist_len = 0;
 			while(tmp != batch_end) {
-				std::copy(tmp->dists.begin(),tmp->dists.end(),dist_itr);
+				std::copy(tmp->dist.begin(),tmp->dist.end(),dist_itr);
 				dist_itr += vocab.size();
 				dist_len += vocab.size();
 				++tmp;
