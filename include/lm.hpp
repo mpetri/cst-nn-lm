@@ -108,12 +108,12 @@ create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node
 	std::vector<train_instance_t> instances;
 	if(prefix.back() < vocab.start_sent_tok) return instances;
 
-	train_instance_t new_instance;
-	new_instance.dist.resize(vocab.size());
-	new_instance.prefix = prefix;
 	double node_size = cst.size(cst_node);
-	new_instance.num_occ = node_size;
 	if(node_size >= threshold) {
+		train_instance_t new_instance;
+		new_instance.num_occ = node_size;
+		new_instance.dist.resize(vocab.size());
+		new_instance.prefix = prefix;
 		auto node_depth = cst.depth(cst_node);
 		for(const auto& child : cst.children(cst_node)) {
 			auto tok = cst.edge(child,node_depth+1);
@@ -126,8 +126,8 @@ create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node
 				instances.insert(instances.end(),child_instances.begin(),child_instances.end());
 			}
 		}
+		instances.push_back(new_instance);
 	}
-	instances.push_back(new_instance);
 	return instances;
 }
 
@@ -165,7 +165,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 		CNLOG << "start epoch " << epoch;
 
 		// (1) explore the CST a bit as a start
-		CNLOG << "explore CST and create instances " << epoch;
+		CNLOG << "explore CST and create instances ";
 		auto prep_start = std::chrono::high_resolution_clock::now();
 		std::vector<train_instance_t> instances;
 		std::vector<std::future<std::vector<train_instance_t>>> results;
