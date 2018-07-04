@@ -1,7 +1,7 @@
 #pragma once
 
 namespace defaults {
-	size_t VOCAB_SIZE = 30000;
+	unsigned int VOCAB_SIZE = 30000;
 	unsigned int HIDDEN_DIM = 1024;
 	unsigned int LAYERS = 2;
 	unsigned int INPUT_DIM = 256;
