@@ -86,7 +86,7 @@ struct language_model {
 				cur_sym[j] = instance->prefix[i];
 			}
 			dynet::Expression i_x_t = dynet::lookup(cg, p_c,cur_sym);
-			dynet::Expression i_y_t = rnn.add_input(i_x_t);
+			rnn.add_input(i_x_t);
 		}
 		auto last_instance = start + batch_size - 1;
 		for(size_t j=0;j<batch_size;j++) cur_sym[j] = last_instance->prefix.back();
@@ -97,7 +97,7 @@ struct language_model {
 		dynet::Expression i_pred = dynet::log_softmax(i_r_t);
 		dynet::Expression i_pred_linear = dynet::reshape(i_pred,{(unsigned int)dist_len});
 		dynet::Expression i_true = dynet::input(cg, {(unsigned int)dist_len},dists);
-		dynet::Expression i_error = dynet::transpose(i_true) * i_pred;
+		dynet::Expression i_error = dynet::transpose(i_true) * i_pred_linear;
 		return i_error;
 	}
 };
@@ -169,8 +169,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 		std::vector<train_instance_t> instances;
 		std::vector<std::future<std::vector<train_instance_t>>> results;
 		for(size_t thread=0;thread<threads;thread++) {
-			auto handle = std::async(std::launch::async,process_token_subtree,cst,vocab,thread,threshold);
-			results.push_back(handle);
+			results.push_back(std::async(std::launch::async,process_token_subtree,cst,vocab,thread,threshold));
 		}
 		for(auto& e : results) {
 			auto res = e.get();
