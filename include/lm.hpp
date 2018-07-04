@@ -1,5 +1,7 @@
 #pragma once
 
+#include <future>
+
 #include "dynet/nodes.h"
 #include "dynet/dynet.h"
 #include "dynet/training.h"
