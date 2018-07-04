@@ -18,8 +18,15 @@
 using cst_node_type = typename cst_type::node_type;
 
 struct train_instance_t {
+	size_t num_occ;
 	std::vector<uint32_t> prefix;
 	std::vector<float> dist;
+	bool operator<(const train_instance_t& other) const {
+		if(prefix.size() == other.prefix.size()) {
+			return num_occ > other.num_occ;
+		}
+		return prefix.size() < other.prefix.size();
+	}
 };
 
 struct language_model {
@@ -54,28 +61,13 @@ struct language_model {
 		rnn = dynet::LSTMBuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model);
 	}
 
-	dynet::Expression build_train_graph(dynet::ComputationGraph& cg,train_instance_t& instance) {
-		// Initialize the RNN for a new computation graph
-		rnn.new_graph(cg);
-		// Prepare for new sequence (essentially set hidden states to 0)
-		rnn.start_new_sequence();
-		// Instantiate embedding parameters in the computation graph
-		// output -> word rep parameters (matrix + bias)
-		i_R = dynet::parameter(cg, p_R);
-		i_bias = dynet::parameter(cg, p_bias);
-		for (size_t i = 0; i < instance.prefix.size()-1; ++i) {
-			dynet::Expression i_x_t = dynet::lookup(cg, p_c, instance.prefix[i]);
-			dynet::Expression i_y_t = rnn.add_input(i_x_t);
-		}
-		dynet::Expression i_x_t = dynet::lookup(cg, p_c, instance.prefix.back());
-		dynet::Expression i_y_t = rnn.add_input(i_x_t);
-		dynet::Expression i_r_t = i_bias + i_R * i_y_t;
-		dynet::Expression i_true = dynet::input(cg, {(unsigned int)instance.dist.size()}, instance.dist);
-		dynet::Expression i_error = dynet::transpose(i_true) * dynet::log_softmax(i_r_t);
-		return i_error;
-	}
-
-	dynet::Expression build_train_graph_batch(dynet::ComputationGraph& cg,std::vector<train_instance_t>& instances) {
+	template<class t_itr>
+	dynet::Expression build_train_graph_batch(dynet::ComputationGraph& cg,t_itr& start,t_itr& end,
+		std::vector<float>& dists,size_t dist_len
+	) {
+		size_t batch_size = std::distance(start,end);
+		size_t prefix_len = start->prefix.size();
+		
 		// Initialize the RNN for a new computation graph
 		rnn.new_graph(cg);
 		// Prepare for new sequence (essentially set hidden states to 0)
@@ -85,112 +77,83 @@ struct language_model {
 		i_R = dynet::parameter(cg, p_R);
 		i_bias = dynet::parameter(cg, p_bias);
 
-		std::vector<uint32_t> cur_sym(instances.size());
-		for (size_t i = 0; i < instances.prefix.size()-1; ++i) {
-			for(size_t j=0;j<instances.size();j++) cur_sym[j] = instances[j].prefix[i];
+		std::vector<uint32_t> cur_sym(batch_size);
+		for (size_t i = 0; i < prefix_len-1; ++i) {
+			for(size_t j=0;j<batch_size;j++) {
+				auto instance = start + i;
+				cur_sym[j] = instance->prefix[i];
+			}
 			dynet::Expression i_x_t = dynet::lookup(cg, p_c,cur_sym);
 			dynet::Expression i_y_t = rnn.add_input(i_x_t);
 		}
-		for(size_t j=0;j<instances.size();j++) cur_sym[j] = instances[j].prefix.back();
+		auto last_instance = start + batch_size - 1;
+		for(size_t j=0;j<batch_size;j++) cur_sym[j] = last_instance->prefix.back();
 		dynet::Expression i_x_t = dynet::lookup(cg, p_c,cur_sym);
 		dynet::Expression i_y_t = rnn.add_input(i_x_t);
 		dynet::Expression i_r_t = i_bias + i_R * i_y_t;
 
-		dynet::Expression i_error = 0;
 		dynet::Expression i_pred = dynet::log_softmax(i_r_t);
-		for(size_t j=0;j<instances.size();j++) {
-			dynet::Expression i_true = dynet::input(cg, {(unsigned int)instances[j].dist.size()}, instances[j].dist);
-			i_error = i_error + dynet::sum(dynet::transpose(i_true) * dynet::pick(i_pred,j));
-		}
+		dynet::Expression i_pred_linear = dynet::reshape(i_pred,{(unsigned int)dist_len});
+		dynet::Expression i_true = dynet::input(cg, {(unsigned int)dist_len},dists);
+		dynet::Expression i_error = dynet::transpose(i_true) * i_pred;
 		return i_error;
 	}
 };
 
-struct pq_node_type {
-	std::vector<uint32_t> prefix;
-	cst_node_type cst_node;
-	size_t priority;
-	bool operator<(const pq_node_type& other) const {
-		return priority < other.priority;
-	}
-};
-
-using pq_type = std::priority_queue<pq_node_type>;
-
-std::string
-print_pq_node(pq_node_type& node,const vocab_t& vocab,const cst_type& cst)
+std::vector<train_instance_t>
+create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type& cst_node,std::vector<uint32_t> prefix,size_t threshold)
 {
-	std::string node_str = u8"<";
-	node_str += u8"prio=" + std::to_string(node.priority) + u8",";
-	node_str += u8"ids=[";
-	for(size_t i=0;i<node.prefix.size()-1;i++)
-		node_str += std::to_string(node.prefix[i]) + u8",";
-	node_str += std::to_string(node.prefix.back()) + u8"],";
-	node_str += u8"toks=[";
-	for(size_t i=0;i<node.prefix.size()-1;i++)
-		node_str += vocab.inverse_lookup(node.prefix[i]) + u8",";
-	node_str += vocab.inverse_lookup(node.prefix.back()) + u8"]>";
-	return node_str;
-}
+	std::vector<train_instance_t> instances;
+	if(tok < vocab.start_sent_tok) return instances;
 
-void
-add_node(const vocab_t& vocab,const cst_type& cst,pq_type& pq,const pq_node_type& parent,const cst_node_type& cur_node,uint32_t tok)
-{
-	// no need to explore <eof> </s>
-	if(tok < vocab.start_sent_tok) return;
-
-	pq_node_type new_node = parent;
-	new_node.prefix.push_back(tok);
-	new_node.cst_node = cur_node;
-	new_node.priority = cst.size(cur_node);
-	if(cst.is_leaf(cur_node)) {
-		// we have to finish the sentence here
-		auto depth = cst.depth(parent.cst_node) + 2;
-		while(true) {
-			tok = cst.edge(cur_node,depth);
-			if(tok == vocab.stop_sent_tok) break;
-			new_node.prefix.push_back(tok);
-			depth++;
-		}
-	}
-	pq.push(new_node);
-}
-
-
-train_instance_t
-create_instance(const cst_type& cst,pq_type& pq,const vocab_t& vocab)
-{
-	auto start = std::chrono::high_resolution_clock::now();
-	auto top_node = pq.top(); pq.pop();
 	train_instance_t new_instance;
 	new_instance.dist.resize(vocab.size());
-	new_instance.prefix = top_node.prefix;
-
-	double node_size = cst.size(top_node.cst_node);
-
-	if(node_size == 1) {
-		new_instance.dist[vocab.stop_sent_tok] = 1;
-	} else {
-		auto parent_depth = cst.depth(top_node.cst_node);
-		for(const auto& child : cst.children(top_node.cst_node)) {
-			auto tok = cst.edge(child,parent_depth+1);
+	new_instance.prefix = prefix;
+	double node_size = cst.size(cst_node);
+	new_instance.num_occ = node_size;
+	if(node_size >= threshold) {
+		auto node_depth = cst.depth(cst_node);
+		for(const auto& child : cst.children(cst_node)) {
+			auto tok = cst.edge(child,node_depth+1);
 			double size = cst.size(child);
 			new_instance.dist[tok] = size/node_size;
-			if(tok != vocab.start_sent_tok)
-				add_node(vocab,cst,pq,top_node,child,tok);
+			if(tok != vocab.start_sent_tok && tok != vocab.stop_sent_tok && size >= threshold) {
+				auto child_prefix = prefix;
+				child_prefix.push_back(tok);
+				auto child_instances = create_instances(cst,vocab,child,child_prefix,threshold);
+				instances.insert(instances.end(),child_instances.begin(),child_instances.end());
+			}
 		}
 	}
-	auto end = std::chrono::high_resolution_clock::now();
-	std::chrono::duration<double> diff = end-start;
-	CNLOG << "PROCESS NODE " << print_pq_node(top_node,vocab,cst)
-		  << " - " << (diff).count() << "s";
-	return new_instance;
+	instances.push_back(new_instance);
+	return instances;
+}
+
+std::vector<train_instance_t>
+process_token_subtree(const cst_type& cst,const vocab_t& vocab,size_t thread,size_t threshold)
+{
+	std::vector<train_instance_t> instances;
+	for(size_t j=vocab.start_sent_tok;j<vocab.size();j++) {
+		if(j % thread == 0) {
+			size_t lb = cst.csa.C[j];
+			size_t rb = cst.csa.C[j+1] - 1;
+			if(rb-lb+1 >= threshold) {
+				auto cst_node = cst.node(lb,rb);
+				std::vector<uint32_t> prefix(1,j);
+				auto subtree_instances = create_instances(cst,vocab,cst_node,prefix,threshold);
+				instances.insert(instances.end(),subtree_instances.begin(),subtree_instances.end());
+			}
+		}
+	}
+	return instances;
 }
 
 language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 {
 	auto num_epochs = args["epochs"].as<uint32_t>();
 	auto batch_size = args["batch_size"].as<uint32_t>();
+	auto threads = args["threads"].as<size_t>();
+	auto threshold = args["threshold"].as<size_t>();
 	language_model lm(vocab,args);
 
 	dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
@@ -199,37 +162,61 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 	for(size_t epoch = 1;epoch<=num_epochs;epoch++) {
 		CNLOG << "start epoch " << epoch;
 
-		// (1) create the starting nodes
-		std::priority_queue<pq_node_type> pq;
-		pq_node_type root;
-		root.cst_node = cst.root();
-		for(size_t i=vocab.start_sent_tok;i<vocab.size();i++) {
-			size_t lb = cst.csa.C[i];
-			size_t rb = cst.csa.C[i+1] - 1;
-			auto cst_node = cst.node(lb,rb);
-			add_node(vocab,cst,pq,root,cst_node,i);
+		// (1) explore the CST a bit as a start
+		auto prep_start = std::chrono::high_resolution_clock::now();
+		std::vector<train_instance_t> instances;
+		std::vector<std::future<std::vector<train_instance_t>>> results;
+		for(size_t thread=0;thread<threads;thread++) {
+			auto handle = std::async(std::launch::async,process_token_subtree,cst,vocab,thread,threshold);
+			results.push_back(handle);
 		}
+		for(const auto& e : results) {
+			auto res = e.get();
+			instances.insert(instances.end(),res.begin(),res.end());
+		}
+		auto prep_end = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> prep_diff = prep_end-prep_start;
+		CNLOG << "CREATE EPOCH INSTANCES " << " - " << prep_diff.count() << "s";
 
-		std::vector<dynet::Expression> errors(batch_size);
-		dynet::ComputationGraph cg;
-		size_t cur = 0;
-		while(!pq.empty()) {
-			auto instance = create_instance(cst,pq,vocab);
-			errors[cur++] = lm.build_train_graph(cg,instance);
-
-			if(cur == batch_size) {
-				auto start = std::chrono::high_resolution_clock::now();
-				auto loss_expr = dynet::sum(errors);
-				cg.backward(loss_expr);
-       			trainer.update();
-				cur = 0;
-				auto end = std::chrono::high_resolution_clock::now();
-				std::chrono::duration<double> diff = end-start;
-				CNLOG << "BACKWARD/UPDATE " << " - " << (diff).count() << "s";
-				cg.clear();
+		std::sort(instances.begin(),instances.end());
+		std::vector<float> dists(batch_size*vocab.size());
+		
+		auto itr = instances.begin();
+		auto end = instances.end();
+		while(itr != end) {
+			// (1) ensure we have same length in batch
+			auto batch_end = itr + batch_size;
+			if(batch_end > end) {
+				batch_end = end;
 			}
-		}
+			auto last = batch_end - 1;
+			while(last->prefix.size() != itr->prefix.size()) {
+				last--;
+				batch_end = last + 1;
+			}
 
+			// (2) copy the dists into one long vector 
+			auto tmp = itr;
+			auto dist_itr = dists.begin();
+			size_t dist_len = 0;
+			while(tmp != batch_end) {
+				std::copy(tmp->dists.begin(),tmp->dists.end(),dist_itr);
+				dist_itr += vocab.size();
+				dist_len += vocab.size();
+				++tmp;
+			}
+
+			dynet::ComputationGraph cg;
+			auto train_start = std::chrono::high_resolution_clock::now();
+			auto loss_expr = lm.build_train_graph_batch(cg,itr,batch_end,dists,dist_len);
+			cg.backward(loss_expr);
+			trainer.update();
+			auto train_end = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> train_diff = train_end-train_start;
+			CNLOG << "BACKWARD/UPDATE " << " - " << train_diff.count() << "s";
+
+			itr = batch_end;
+		}
 	}
 
 	return lm;
