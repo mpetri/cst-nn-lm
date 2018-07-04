@@ -82,7 +82,7 @@ struct language_model {
 		std::vector<uint32_t> cur_sym(batch_size);
 		for (size_t i = 0; i < prefix_len-1; ++i) {
 			for(size_t j=0;j<batch_size;j++) {
-				auto instance = start + i;
+				auto instance = start + j;
 				cur_sym[j] = instance->prefix[i];
 			}
 			dynet::Expression i_x_t = dynet::lookup(cg, p_c,cur_sym);
