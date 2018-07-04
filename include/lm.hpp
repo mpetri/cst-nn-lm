@@ -101,10 +101,10 @@ struct language_model {
 };
 
 std::vector<train_instance_t>
-create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type& cst_node,std::vector<uint32_t> prefix,size_t threshold)
+create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node,std::vector<uint32_t> prefix,size_t threshold)
 {
 	std::vector<train_instance_t> instances;
-	if(tok < vocab.start_sent_tok) return instances;
+	if(prefix.back() < vocab.start_sent_tok) return instances;
 
 	train_instance_t new_instance;
 	new_instance.dist.resize(vocab.size());
