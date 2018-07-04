@@ -152,8 +152,8 @@ process_token_subtree(const cst_type& cst,const vocab_t& vocab,size_t thread,siz
 
 language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 {
-	auto num_epochs = args["epochs"].as<uint32_t>();
-	auto batch_size = args["batch_size"].as<uint32_t>();
+	auto num_epochs = args["epochs"].as<size_t>();
+	auto batch_size = args["batch_size"].as<size_t>();
 	auto threads = args["threads"].as<size_t>();
 	auto threshold = args["threshold"].as<size_t>();
 	language_model lm(vocab,args);
