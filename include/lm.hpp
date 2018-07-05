@@ -109,7 +109,7 @@ print_prefix(std::vector<uint32_t>& prefix)
 	for(size_t i=0;i<prefix.size()-1;i++) {
 		s += std::to_string(prefix[i]) + ",";
 	}
-	return s + std::to_string(prefix.back()) + "]"
+	return s + std::to_string(prefix.back()) + "]";
 }
 
 std::vector<train_instance_t>
