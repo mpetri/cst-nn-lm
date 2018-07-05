@@ -102,13 +102,25 @@ struct language_model {
 	}
 };
 
+std::string
+print_prefix(std::vector<uint32_t>& prefix)
+{
+	std::string s = "[";
+	for(size_t i=0;i<prefix.size()-1;i++) {
+		s += std::to_string(prefix[i]) + ",";
+	}
+	return s + std::to_string(prefix.back()) + "]"
+}
+
 std::vector<train_instance_t>
 create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node,std::vector<uint32_t> prefix,size_t threshold)
 {
+	CNLOG << "START create_instances for subtree " << print_prefix(prefix);
 	std::vector<train_instance_t> instances;
 	if(prefix.back() < vocab.start_sent_tok) return instances;
 
 	double node_size = cst.size(cst_node);
+	CNLOG << "\tNODE SIZE = " (size_t)node_size;
 	if(node_size >= threshold) {
 		train_instance_t new_instance;
 		new_instance.num_occ = node_size;
@@ -128,6 +140,7 @@ create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node
 		}
 		instances.push_back(new_instance);
 	}
+	CNLOG << "STOP create_instances for subtree " << print_prefix(prefix);
 	return instances;
 }
 
