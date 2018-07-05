@@ -120,7 +120,7 @@ create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node
 	if(prefix.back() < vocab.start_sent_tok) return instances;
 
 	double node_size = cst.size(cst_node);
-	CNLOG << "\tNODE SIZE = " (size_t)node_size;
+	CNLOG << "\tNODE SIZE = "   << (size_t)node_size;
 	if(node_size >= threshold) {
 		train_instance_t new_instance;
 		new_instance.num_occ = node_size;
