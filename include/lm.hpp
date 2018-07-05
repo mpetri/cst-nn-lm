@@ -116,7 +116,7 @@ print_prefix(std::vector<uint32_t>& prefix,const vocab_t& vocab)
 std::vector<train_instance_t>
 create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node,std::vector<uint32_t> prefix,size_t threshold)
 {
-	CNLOG << "START create_instances for subtree " << print_prefix(prefix);
+	CNLOG << "START create_instances for subtree " << print_prefix(prefix,vocab);
 	std::vector<train_instance_t> instances;
 	if(prefix.back() < vocab.start_sent_tok) return instances;
 
