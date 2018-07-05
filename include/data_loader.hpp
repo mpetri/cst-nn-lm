@@ -173,10 +173,10 @@ struct data_loader {
 		parse_text(c);
 		CNLOG << "\t\tnum tokens = " << c.num_tokens;
 		CNLOG << "\t\tnum sentences = " << c.num_sentences;
-		CNLOG << "\t\tstart_sent_tok = " << c.vocab.start_sent_tok;
-		CNLOG << "\t\tstop_sent_tok = " << c.vocab.stop_sent_tok;
-		CNLOG << "\t\tunk_tok = " << c.vocab.unk_tok;
-		CNLOG << "\t\teof_tok = " << c.vocab.eof_tok;
+		for(size_t i=0;i<100;i++) {
+			auto str_tok = c.vocab.inverse_lookup(i);
+			CNLOG << "\t\t" << i << " = " << str_tok;
+		}
 		return c;
 	}
 };

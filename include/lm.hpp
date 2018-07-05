@@ -182,7 +182,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 		auto prep_start = std::chrono::high_resolution_clock::now();
 		std::vector<train_instance_t> instances;
 		std::vector<std::future<std::vector<train_instance_t>>> results;
-		for(size_t thread=0;thread<=threads;thread++) {
+		for(size_t thread=0;thread<threads;thread++) {
 			size_t start = vocab.start_sent_tok + thread;
 			results.push_back(std::async(std::launch::async,process_token_subtree,cst,vocab,start,threads,threshold));
 		}
