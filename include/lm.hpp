@@ -21,6 +21,7 @@ using cst_node_type = typename cst_type::node_type;
 
 struct train_instance_t {
 	size_t num_occ;
+	cst_node_type cst_node;
 	std::vector<uint32_t> prefix;
 	std::vector<float> dist;
 	bool operator<(const train_instance_t& other) const {
@@ -126,6 +127,7 @@ create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node
 		new_instance.num_occ = node_size;
 		new_instance.dist.resize(vocab.size());
 		new_instance.prefix = prefix;
+		new_instance.cst_node = cst_node;
 		auto node_depth = cst.depth(cst_node);
 		for(const auto& child : cst.children(cst_node)) {
 			auto tok = cst.edge(child,node_depth+1);

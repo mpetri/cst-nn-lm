@@ -175,6 +175,7 @@ struct data_loader {
 		CNLOG << "\t\tnum sentences = " << c.num_sentences;
 		CNLOG << "\t\tstart_sent_tok = " << c.vocab.start_sent_tok;
 		CNLOG << "\t\tstop_sent_tok = " << c.vocab.stop_sent_tok;
+		CNLOG << "\t\tunk_tok = " << c.vocab.unk_tok;
 		CNLOG << "\t\teof_tok = " << c.vocab.eof_tok;
 		return c;
 	}
