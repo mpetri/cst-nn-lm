@@ -142,7 +142,7 @@ create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node
 		}
 		instances.push_back(new_instance);
 	}
-	CNLOG << "STOP create_instances for subtree " << print_prefix(prefix);
+	CNLOG << "STOP create_instances for subtree " << print_prefix(prefix,vocab);
 	return instances;
 }
 
