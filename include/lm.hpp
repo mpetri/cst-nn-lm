@@ -209,7 +209,7 @@ evaluate_pplx(language_model& lm,const vocab_t& vocab,std::string file)
 	double loss = 0.0;
 	double predictions = 0;
 	
-	auto corpus = data_loader::load(vocab,file);
+	auto corpus = data_loader::parse_file(vocab,file);
 	for(size_t i=0;i<corpus.num_sentences;i++) {
 		auto start_sent = corpus.text.begin() + corpus.sent_starts[i];
 		auto sent_len = corpus.sent_lens[i];
