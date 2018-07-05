@@ -216,7 +216,7 @@ evaluate_pplx(language_model& lm,const vocab_t& vocab,std::string file)
 
 		dynet::ComputationGraph cg;
 		auto loss_expr = lm.build_valid_graph(cg,start_sent,sent_len);
-		loss += as_scalar(cg.forward(loss_expr));
+		loss += dynet::as_scalar(cg.forward(loss_expr));
 		predictions += sent_len - 1;
 	}
 	return exp(loss / predictions);
