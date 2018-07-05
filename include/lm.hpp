@@ -105,6 +105,7 @@ struct language_model {
 std::vector<train_instance_t>
 create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node,std::vector<uint32_t> prefix,size_t threshold)
 {
+	CNLOG << create_instances
 	std::vector<train_instance_t> instances;
 	if(prefix.back() < vocab.start_sent_tok) return instances;
 
@@ -132,19 +133,17 @@ create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node
 }
 
 std::vector<train_instance_t>
-process_token_subtree(const cst_type& cst,const vocab_t& vocab,size_t thread,size_t threshold)
+process_token_subtree(const cst_type& cst,const vocab_t& vocab,size_t start,size_t step,size_t threshold)
 {
 	std::vector<train_instance_t> instances;
-	for(size_t j=vocab.start_sent_tok;j<vocab.size();j++) {
-		if(j % thread == 0) {
-			size_t lb = cst.csa.C[j];
-			size_t rb = cst.csa.C[j+1] - 1;
-			if(rb-lb+1 >= threshold) {
-				auto cst_node = cst.node(lb,rb);
-				std::vector<uint32_t> prefix(1,j);
-				auto subtree_instances = create_instances(cst,vocab,cst_node,prefix,threshold);
-				instances.insert(instances.end(),subtree_instances.begin(),subtree_instances.end());
-			}
+	for(size_t j=start;j<vocab.size();j+=step) {
+		size_t lb = cst.csa.C[j];
+		size_t rb = cst.csa.C[j+1] - 1;
+		if(rb-lb+1 >= threshold) {
+			auto cst_node = cst.node(lb,rb);
+			std::vector<uint32_t> prefix(1,j);
+			auto subtree_instances = create_instances(cst,vocab,cst_node,prefix,threshold);
+			instances.insert(instances.end(),subtree_instances.begin(),subtree_instances.end());
 		}
 	}
 	return instances;
@@ -169,8 +168,9 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 		auto prep_start = std::chrono::high_resolution_clock::now();
 		std::vector<train_instance_t> instances;
 		std::vector<std::future<std::vector<train_instance_t>>> results;
-		for(size_t thread=1;thread<=threads;thread++) {
-			results.push_back(std::async(std::launch::async,process_token_subtree,cst,vocab,thread,threshold));
+		for(size_t thread=0;thread<=threads;thread++) {
+			size_t start = vocab.start_sent_tok + thread;
+			results.push_back(std::async(std::launch::async,process_token_subtree,cst,vocab,start,threads,threshold));
 		}
 		for(auto& e : results) {
 			auto res = e.get();
