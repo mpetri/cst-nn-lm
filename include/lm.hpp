@@ -230,7 +230,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 	auto threshold = args["threshold"].as<size_t>();
 	language_model lm(vocab,args);
 
-	auto dev_corpus_file = args["path"] + "/" + constants::DEV_FILE;
+	auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
 
 	dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
 	trainer.clip_threshold *= batch_size;
