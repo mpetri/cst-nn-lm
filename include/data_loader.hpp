@@ -121,8 +121,9 @@ struct data_loader {
 		return boost::algorithm::split(toks,line,boost::is_any_of("\t "),boost::token_compress_on);
 	}
 
-	static vocab_t create_or_load_vocab(std::string path,args_t& args)
+	static vocab_t create_or_load_vocab(args_t& args)
 	{
+		auto path = args["path"].as<std::string>();
 		CNLOG << "\tcreate vocabulary";
 		auto threshold = args["vocab_size"].as<uint32_t>();
 		vocab_t v;
@@ -166,7 +167,7 @@ struct data_loader {
 	    	}
 	    	corpus.text.push_back(corpus.vocab.stop_sent_tok);
 			slen++;
-			corpus.sent_lens(slen);
+			corpus.sent_lens.push_back(slen);
 	    	corpus.num_sentences++;
 		}
 		corpus.num_tokens = corpus.text.size();
@@ -177,7 +178,7 @@ struct data_loader {
 		auto train_file = directory + "/" + constants::TRAIN_FILE;
 		corpus_t c;
 		c.file = train_file;
-		c.vocab = create_or_load_vocab(c.path,args);
+		c.vocab = create_or_load_vocab(args);
 		parse_text(c);
 		CNLOG << "\t\tnum tokens = " << c.num_tokens;
 		CNLOG << "\t\tnum sentences = " << c.num_sentences;
