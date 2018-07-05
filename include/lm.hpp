@@ -22,8 +22,9 @@ using cst_node_type = typename cst_type::node_type;
 struct train_instance_t {
 	size_t num_occ;
 	cst_node_type cst_node;
+	size_t num_children;
 	std::vector<uint32_t> prefix;
-	std::vector<float> dist;
+	// std::vector<float> dist;
 	bool operator<(const train_instance_t& other) const {
 		if(prefix.size() == other.prefix.size()) {
 			return num_occ > other.num_occ;
@@ -125,25 +126,38 @@ create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node
 	if(node_size >= threshold) {
 		train_instance_t new_instance;
 		new_instance.num_occ = node_size;
-		new_instance.dist.resize(vocab.size());
+		// new_instance.dist.resize(vocab.size());
 		new_instance.prefix = prefix;
 		new_instance.cst_node = cst_node;
 		auto node_depth = cst.depth(cst_node);
 		for(const auto& child : cst.children(cst_node)) {
 			auto tok = cst.edge(child,node_depth+1);
 			double size = cst.size(child);
-			new_instance.dist[tok] = size/node_size;
+			// new_instance.dist[tok] = size/node_size;
 			if(tok != vocab.start_sent_tok && tok != vocab.stop_sent_tok && size >= threshold) {
 				auto child_prefix = prefix;
 				child_prefix.push_back(tok);
 				auto child_instances = create_instances(cst,vocab,child,child_prefix,threshold);
 				instances.insert(instances.end(),child_instances.begin(),child_instances.end());
 			}
+			new_instance.num_children++;
 		}
 		instances.push_back(new_instance);
 	}
 	CNLOG << "STOP create_instances for subtree " << print_prefix(prefix,vocab);
 	return instances;
+}
+
+template<class t_dist_itr>
+void create_dist(const cst_type& cst,const train_instance_t& instance,t_dist_itr dist_itr)
+{
+	double node_size = instance.num_occ;
+	auto node_depth = cst.depth(cst_node);
+	for(const auto& child : cst.children(instance.cst_node)) {
+		auto tok = cst.edge(child,node_depth+1);
+		double size = cst.size(child);
+		*(dist_itr + tok) = size/node_size;
+	}
 }
 
 std::vector<train_instance_t>
@@ -211,12 +225,12 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 				batch_end = last + 1;
 			}
 
-			// (2) copy the dists into one long vector 
+			// (2) create the dists and store into one long vector 
 			auto tmp = itr;
 			auto dist_itr = dists.begin();
 			size_t dist_len = 0;
 			while(tmp != batch_end) {
-				std::copy(tmp->dist.begin(),tmp->dist.end(),dist_itr);
+				create_dist(cst,*tmp,dist_itr);
 				dist_itr += vocab.size();
 				dist_len += vocab.size();
 				++tmp;
