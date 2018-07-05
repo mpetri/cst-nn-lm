@@ -102,6 +102,31 @@ struct language_model {
 		dynet::Expression i_error = dynet::transpose(i_true) * i_pred_linear;
 		return i_error;
 	}
+
+
+	template<class t_itr>
+	dynet::Expression build_valid_graph(dynet::ComputationGraph& cg,t_itr itr,size_t len) {
+		
+		// Initialize the RNN for a new computation graph
+		rnn.new_graph(cg);
+		// Prepare for new sequence (essentially set hidden states to 0)
+		rnn.start_new_sequence();
+		// Instantiate embedding parameters in the computation graph
+		// output -> word rep parameters (matrix + bias)
+		i_R = dynet::parameter(cg, p_R);
+		i_bias = dynet::parameter(cg, p_bias);
+
+		vector<Expression> erros(len - 1);
+		for(size_t i=0;i<len-1;i++) {
+			auto cur_sym = *itr++;
+			auto next_sym = *itr;
+			dynet::Expression i_x_t = dynet::lookup(cg, p_c,cur_sym);
+			dynet::Expression i_y_t = rnn.add_input(i_x_t);
+			dynet::Expression i_r_t = i_bias + i_R * i_y_t;
+			erros[i] = pickneglogsoftmax(i_r_t,next_sym);
+		}
+		return sum(erros);
+	}
 };
 
 std::string
@@ -178,6 +203,25 @@ process_token_subtree(const cst_type& cst,const vocab_t& vocab,size_t start,size
 	return instances;
 }
 
+double
+evaluate_pplx(language_model& lm,const vocab_t& vocab,std::string file)
+{
+	double loss = 0.0;
+	double predictions = 0;
+	
+	auto corpus = data_loader::load(vocab,file);
+	for(size_t i=0;i<corpus.num_sentences;i++) {
+		auto start_sent = corpus.text.begin() + corpus.sent_starts[i];
+		auto sent_len = corpus.sent_lens[i];
+
+		dynet::ComputationGraph cg;
+		auto loss_expr = lm.build_valid_graph(cg,start_sent,sent_len);
+		loss += as_scalar(cg.forward(loss_expr));
+		predictions += sent_len - 1;
+	}
+	return exp(loss / predictions);
+}
+
 language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 {
 	auto num_epochs = args["epochs"].as<size_t>();
@@ -185,6 +229,8 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 	auto threads = args["threads"].as<size_t>();
 	auto threshold = args["threshold"].as<size_t>();
 	language_model lm(vocab,args);
+
+	auto dev_corpus_file = args["path"] + "/" + constants::DEV_FILE;
 
 	dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
 	trainer.clip_threshold *= batch_size;
@@ -252,6 +298,10 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 
 			itr = batch_end;
 		}
+		CNLOG << "finish epoch " << epoch;
+
+		auto pplx = evaluate_pplx(lm,vocab,dev_corpus_file);
+		CNLOG << "epoch dev pplx = " << pplx;
 	}
 
 	return lm;

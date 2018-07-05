@@ -61,6 +61,11 @@ int main(int argc,char** argv)
 	dynet::initialize(argc, argv);
 	auto lm = create_lm(cst,corpus.vocab,args);
 
+	CNLOG << "test language model";
+	auto test_corpus_file = args["path"] + "/" + constants::TEST_FILE;
+	auto pplx = evaluate_pplx(lm,corpus.vocab,test_corpus_file);
+	CNLOG << "test pplx = " << pplx;
+
 	return 0;
 }
 

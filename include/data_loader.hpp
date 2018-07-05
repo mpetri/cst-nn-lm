@@ -102,8 +102,10 @@ struct vocab_t {
 };
 
 struct corpus_t {
-	std::string path;
+	std::string file;
 	vocab_t vocab;
+	std::vector<uint32_t> sent_starts;
+	std::vector<uint32_t> sent_lens;
 	sdsl::int_vector<32> text;
 	size_t num_tokens = 0;
 	size_t num_sentences = 0;
@@ -146,20 +148,25 @@ struct data_loader {
 	static void parse_text(corpus_t& corpus)
 	{
 		CNLOG << "\tparse input text";
-		auto train_file = corpus.path + "/" + constants::TRAIN_FILE;
+		auto train_file = corpus.file;
 		std::ifstream input(train_file);
 		input.imbue( std::locale( "C.UTF-8" ) );
 	    for (std::string line; std::getline(input, line); ) {
 	    	auto toks = tokenize_line(line);
 	    	if(toks.size() < 2) continue;
+			corpus.sent_starts.push_back(corpus.text.size());
+			size_t slen = 1;
 	    	corpus.text.push_back(corpus.vocab.start_sent_tok);
 	    	for(const auto& tok : toks) {
 	    		corpus.text.push_back(corpus.vocab.lookup(tok));
 	    		if(corpus.text.back() == corpus.vocab.unk_tok) {
 	    			corpus.num_oov++;
 	    		}
+				slen++;
 	    	}
 	    	corpus.text.push_back(corpus.vocab.stop_sent_tok);
+			slen++;
+			corpus.sent_lens(slen);
 	    	corpus.num_sentences++;
 		}
 		corpus.num_tokens = corpus.text.size();
@@ -167,16 +174,30 @@ struct data_loader {
 
 	static corpus_t load(args_t& args) {
 		auto directory = args["path"].as<std::string>();
+		auto train_file = directory + "/" + constants::TRAIN_FILE;
 		corpus_t c;
-		c.path = directory;
+		c.file = train_file;
 		c.vocab = create_or_load_vocab(c.path,args);
 		parse_text(c);
 		CNLOG << "\t\tnum tokens = " << c.num_tokens;
 		CNLOG << "\t\tnum sentences = " << c.num_sentences;
+		CNLOG << "\t\tnum oov = " << c.num_oov;
 		for(size_t i=0;i<100;i++) {
 			auto str_tok = c.vocab.inverse_lookup(i);
 			CNLOG << "\t\t" << i << " = " << str_tok;
 		}
+		return c;
+	}
+
+	static corpus_t parse_file(const vocab_t& vocab,std::string file)
+	{
+		corpus_t c;
+		c.file = file;
+		c.vocab = vocab;
+		parse_text(c);
+		CNLOG << "\t\tnum tokens = " << c.num_tokens;
+		CNLOG << "\t\tnum sentences = " << c.num_sentences;
+		CNLOG << "\t\tnum oov = " << c.num_oov;
 		return c;
 	}
 };
