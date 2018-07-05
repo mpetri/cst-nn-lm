@@ -116,7 +116,7 @@ struct language_model {
 		i_R = dynet::parameter(cg, p_R);
 		i_bias = dynet::parameter(cg, p_bias);
 
-		vector<Expression> erros(len - 1);
+		std::vector<dynet::Expression> erros(len - 1);
 		for(size_t i=0;i<len-1;i++) {
 			auto cur_sym = *itr++;
 			auto next_sym = *itr;
@@ -125,7 +125,7 @@ struct language_model {
 			dynet::Expression i_r_t = i_bias + i_R * i_y_t;
 			erros[i] = pickneglogsoftmax(i_r_t,next_sym);
 		}
-		return sum(erros);
+		return dynet::sum(erros);
 	}
 };
 
