@@ -152,7 +152,7 @@ template<class t_dist_itr>
 void create_dist(const cst_type& cst,const train_instance_t& instance,t_dist_itr dist_itr)
 {
 	double node_size = instance.num_occ;
-	auto node_depth = cst.depth(cst_node);
+	auto node_depth = cst.depth(instance.cst_node);
 	for(const auto& child : cst.children(instance.cst_node)) {
 		auto tok = cst.edge(child,node_depth+1);
 		double size = cst.size(child);
