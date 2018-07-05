@@ -117,6 +117,7 @@ print_prefix(std::vector<uint32_t>& prefix,const vocab_t& vocab)
 std::vector<train_instance_t>
 create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node,std::vector<uint32_t> prefix,size_t threshold)
 {
+
 	// CNLOG << "START create_instances for subtree " << print_prefix(prefix,vocab);
 	std::vector<train_instance_t> instances;
 	if(prefix.back() < vocab.start_sent_tok) return instances;
@@ -192,7 +193,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 		CNLOG << "start epoch " << epoch;
 
 		// (1) explore the CST a bit as a start
-		CNLOG << "explore CST and create instances ";
+		CNLOG << "explore CST and create instances. threshold = " << threshold;
 		auto prep_start = std::chrono::high_resolution_clock::now();
 		std::vector<train_instance_t> instances;
 		std::vector<std::future<std::vector<train_instance_t>>> results;
@@ -208,12 +209,16 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 		std::chrono::duration<double> prep_diff = prep_end-prep_start;
 		CNLOG << "CREATE EPOCH INSTANCES " << " - " << prep_diff.count() << "s";
 
+		CNLOG << "NUMBER OF INSTANCES = " << instances.size();
 		std::sort(instances.begin(),instances.end());
 		std::vector<float> dists(batch_size*vocab.size());
 		
+		auto start = instances.begin();
 		auto itr = instances.begin();
 		auto end = instances.end();
 		while(itr != end) {
+			CNLOG << std::distance(start,itr) << "/" << instances.size();
+
 			// (1) ensure we have same length in batch
 			auto batch_end = itr + batch_size;
 			if(batch_end > end) {
