@@ -1,6 +1,7 @@
 #pragma once
 
 #include <future>
+#include <iomanip>
 
 #include "dynet/nodes.h"
 #include "dynet/dynet.h"
@@ -142,24 +143,19 @@ print_prefix(std::vector<uint32_t>& prefix,const vocab_t& vocab)
 std::vector<train_instance_t>
 create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node,std::vector<uint32_t> prefix,size_t threshold)
 {
-
-	// CNLOG << "START create_instances for subtree " << print_prefix(prefix,vocab);
 	std::vector<train_instance_t> instances;
 	if(prefix.back() < vocab.start_sent_tok) return instances;
 
 	double node_size = cst.size(cst_node);
-	// CNLOG << "\tNODE SIZE = "   << (size_t)node_size;
 	if(node_size >= threshold) {
 		train_instance_t new_instance;
 		new_instance.num_occ = node_size;
-		// new_instance.dist.resize(vocab.size());
 		new_instance.prefix = prefix;
 		new_instance.cst_node = cst_node;
 		auto node_depth = cst.depth(cst_node);
 		for(const auto& child : cst.children(cst_node)) {
 			auto tok = cst.edge(child,node_depth+1);
 			double size = cst.size(child);
-			// new_instance.dist[tok] = size/node_size;
 			if(tok != vocab.start_sent_tok && tok != vocab.stop_sent_tok && size >= threshold) {
 				auto child_prefix = prefix;
 				child_prefix.push_back(tok);
@@ -170,7 +166,6 @@ create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node
 		}
 		instances.push_back(new_instance);
 	}
-	// CNLOG << "STOP create_instances for subtree " << print_prefix(prefix,vocab);
 	return instances;
 }
 
@@ -222,6 +217,30 @@ evaluate_pplx(language_model& lm,const vocab_t& vocab,std::string file)
 	return exp(loss / predictions);
 }
 
+template<class t_itr>
+void print_batch(t_itr& start,t_itr& end,std::vector<float>& dists,size_t dist_len)
+{
+	std::cout << "====================================================" << std::endl;
+	size_t batch_size = std::distance(start,end);
+	size_t vocab_size = dist_len / batch_size;
+	for(size_t i=0;i<batch_size;i++) {
+		auto instance = start + i;
+		auto dist = dists.begin() + (i*vocab_size);
+		std::cout << std::setw(3) << i << " ["
+		for(size_t j=0;j<instance->prefix.size()-1;j++) {
+			std::cout << instance->prefix[j] << ",";
+		}
+		std::cout << instance->prefix.back() << "] - <";
+		for(size_t j=0;j<vocab_size<j++) {
+			if(dist[j] != 0) {
+				std::cout << j << ":" << dist[j] << ",";
+			}
+		}
+		std::cout << ">" << std::endl;
+	}
+	std::cout << "====================================================" << std::endl;
+}
+
 language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 {
 	auto num_epochs = args["epochs"].as<size_t>();
@@ -265,6 +284,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 		while(itr != end) {
 			CNLOG << std::distance(start,itr) << "/" << instances.size();
 
+
 			// (1) ensure we have same length in batch
 			auto batch_end = itr + batch_size;
 			if(batch_end > end) {
@@ -285,6 +305,11 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 				dist_itr += vocab.size();
 				dist_len += vocab.size();
 				++tmp;
+			}
+
+
+			if( 219284 == std::distance(start,itr)) {
+				print_batch(itr,batch_end,dist,dist_len);
 			}
 
 			dynet::ComputationGraph cg;
