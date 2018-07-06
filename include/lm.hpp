@@ -226,12 +226,12 @@ void print_batch(t_itr& start,t_itr& end,std::vector<float>& dists,size_t dist_l
 	for(size_t i=0;i<batch_size;i++) {
 		auto instance = start + i;
 		auto dist = dists.begin() + (i*vocab_size);
-		std::cout << std::setw(3) << i << " ["
+		std::cout << std::setw(3) << i << " [";
 		for(size_t j=0;j<instance->prefix.size()-1;j++) {
 			std::cout << instance->prefix[j] << ",";
 		}
 		std::cout << instance->prefix.back() << "] - <";
-		for(size_t j=0;j<vocab_size<j++) {
+		for(size_t j=0;j<vocab_size;j++) {
 			if(dist[j] != 0) {
 				std::cout << j << ":" << dist[j] << ",";
 			}
@@ -309,7 +309,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 
 
 			if( 219284 == std::distance(start,itr) || 0 == std::distance(start,itr) ) {
-				print_batch(itr,batch_end,dist,dist_len);
+				print_batch(itr,batch_end,dists,dist_len);
 			}
 
 			dynet::ComputationGraph cg;
