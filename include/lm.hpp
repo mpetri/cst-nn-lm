@@ -170,10 +170,13 @@ create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node
 }
 
 template<class t_dist_itr>
-void create_dist(const cst_type& cst,const train_instance_t& instance,t_dist_itr dist_itr)
+void create_dist(const cst_type& cst,const train_instance_t& instance,t_dist_itr dist_itr,size_t vocab_size)
 {
 	double node_size = instance.num_occ;
 	auto node_depth = cst.depth(instance.cst_node);
+	for(size_t i=0;i<vocab_size;i++) {
+		*(dist_itr + i) = 0;
+	}
 	for(const auto& child : cst.children(instance.cst_node)) {
 		auto tok = cst.edge(child,node_depth+1);
 		double size = cst.size(child);
@@ -301,7 +304,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 			auto dist_itr = dists.begin();
 			size_t dist_len = 0;
 			while(tmp != batch_end) {
-				create_dist(cst,*tmp,dist_itr);
+				create_dist(cst,*tmp,dist_itr,vocab.size());
 				dist_itr += vocab.size();
 				dist_len += vocab.size();
 				++tmp;
