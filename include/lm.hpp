@@ -308,7 +308,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 			}
 
 
-			if( 219284 == std::distance(start,itr)) {
+			if( 219284 == std::distance(start,itr) || 0 == std::distance(start,itr) ) {
 				print_batch(itr,batch_end,dist,dist_len);
 			}
 
