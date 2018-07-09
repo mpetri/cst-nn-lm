@@ -327,7 +327,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 			std::chrono::duration<double> train_diff = train_end-train_start;
 			auto time_per_instance = train_diff.count() / actual_batch_size;
 			CNLOG << std::distance(start,itr) << "/" << instances.size() 
-				  << " batch_size = " << actual_batch_size;
+				  << " batch_size = " << actual_batch_size
 				  << " FW/BW/UPDATE " << " - " 
 				  << time_per_instance << "s/instance - loss = " << instance_loss;
 		}
