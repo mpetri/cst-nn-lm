@@ -325,11 +325,11 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 			itr = batch_end;
 			auto train_end = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> train_diff = train_end-train_start;
-			auto time_per_instance = train_diff.count() / actual_batch_size;
+			auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 			CNLOG << std::distance(start,itr) << "/" << instances.size() 
 				  << " batch_size = " << actual_batch_size
 				  << " FW/BW/UPDATE " << " - " 
-				  << time_per_instance << "s/instance - loss = " << instance_loss;
+				  << time_per_instance << "ms/instance - loss = " << instance_loss;
 		}
 		CNLOG << "finish epoch. compute dev pplx " << epoch;
 
