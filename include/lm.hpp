@@ -289,9 +289,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 		auto start = instances.begin();
 		auto itr = instances.begin();
 		auto end = instances.end();
-		bool debug = false;
 		while(itr != end) {
-			CNLOG << std::distance(start,itr) << "/" << instances.size() << " batch size = " << batch_size;
 
 			// (1) ensure we have same length in batch
 			auto batch_end = itr + batch_size;
@@ -304,7 +302,6 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 				batch_end = last + 1;
 			}
 			auto actual_batch_size = std::distance(itr,batch_end);
-			CNLOG << "actual batch size after len adjustments " << actual_batch_size;
 			trainer.clip_threshold = clip_threshold * actual_batch_size;
 
 			// (2) create the dists and store into one long vector 
@@ -318,28 +315,21 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 				++tmp;
 			}
 
-
 			dynet::ComputationGraph cg;
-			if(debug) {
-				cg.set_immediate_compute(true);
-				cg.set_check_validity(true);
-			}
 			auto train_start = std::chrono::high_resolution_clock::now();
 			auto loss_expr = lm.build_train_graph_batch(cg,itr,batch_end,dists,dist_len);
 			auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
-			try {
-				cg.backward(loss_expr);
-				trainer.update();
-				itr = batch_end;
-			} catch(std::runtime_error& e) {
-				CNLOG << "Exception: " << e.what();
-				lm.model.reset_gradient();
-				batch_size = 1;
-				debug = true;
-			}
+			auto instance_loss = loss_float / actual_batch_size;
+			cg.backward(loss_expr);
+			trainer.update();
+			itr = batch_end;
 			auto train_end = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> train_diff = train_end-train_start;
-			CNLOG << "FORWARD/BACKWARD/UPDATE " << " - " << train_diff.count() << "s - loss = " << loss_float;
+			auto time_per_instance = train_diff.count() / actual_batch_size;
+			CNLOG << std::distance(start,itr) << "/" << instances.size() 
+				  << " batch_size = " << actual_batch_size;
+				  << " FW/BW/UPDATE " << " - " 
+				  << time_per_instance << "s/instance - loss = " << instance_loss;
 		}
 		CNLOG << "finish epoch. compute dev pplx " << epoch;
 
