@@ -139,7 +139,6 @@ struct data_loader {
 		input.imbue( std::locale( "C.UTF-8" ) );
 	    for (std::string line; std::getline(input, line); ) {
 	    	auto toks = tokenize_line(line);
-	    	if(toks.size() < 2) continue;
 	    	for(const auto& tok : toks) v.add_token(tok);
 		}
 		v.freeze();
@@ -148,13 +147,12 @@ struct data_loader {
 
 	static void parse_text(corpus_t& corpus)
 	{
-		CNLOG << "\tparse input text";
+		CNLOG << "\tparse text " << corpus.file;
 		auto train_file = corpus.file;
 		std::ifstream input(train_file);
 		input.imbue( std::locale( "C.UTF-8" ) );
 	    for (std::string line; std::getline(input, line); ) {
 	    	auto toks = tokenize_line(line);
-	    	if(toks.size() < 2) continue;
 			corpus.sent_starts.push_back(corpus.text.size());
 			size_t slen = 1;
 	    	corpus.text.push_back(corpus.vocab.start_sent_tok);
