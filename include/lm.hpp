@@ -97,7 +97,7 @@ struct language_model {
 		dynet::Expression i_y_t = rnn.add_input(i_x_t);
 		dynet::Expression i_r_t = i_bias + i_R * i_y_t;
 
-		dynet::Expression i_pred = dynet::log_softmax(i_r_t);
+		dynet::Expression i_pred = - dynet::log_softmax(i_r_t);
 		dynet::Expression i_pred_linear = dynet::reshape(i_pred,{(unsigned int)dist_len});
 		dynet::Expression i_true = dynet::input(cg, {(unsigned int)dist_len},dists);
 		dynet::Expression i_error = dynet::transpose(i_true) * i_pred_linear;
@@ -152,6 +152,7 @@ create_instances(const cst_type& cst,const vocab_t& vocab,cst_node_type cst_node
 		new_instance.num_occ = node_size;
 		new_instance.prefix = prefix;
 		new_instance.cst_node = cst_node;
+		new_instance.num_children = 0;
 		auto node_depth = cst.depth(cst_node);
 		for(const auto& child : cst.children(cst_node)) {
 			auto tok = cst.edge(child,node_depth+1);
@@ -229,7 +230,7 @@ void print_batch(t_itr& start,t_itr& end,std::vector<float>& dists,size_t dist_l
 	for(size_t i=0;i<batch_size;i++) {
 		auto instance = start + i;
 		auto dist = dists.begin() + (i*vocab_size);
-		std::cout << std::setw(3) << i << " [";
+		std::cout << std::setw(3) << i << " - " << instance->num_occ << " - " << instance->num_children << " [";
 		for(size_t j=0;j<instance->prefix.size()-1;j++) {
 			std::cout << instance->prefix[j] << ",";
 		}
@@ -255,7 +256,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 	auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
 
 	dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
-	trainer.clip_threshold *= batch_size;
+	auto clip_threshold = trainer.clip_threshold;
 
 	for(size_t epoch = 1;epoch<=num_epochs;epoch++) {
 		CNLOG << "start epoch " << epoch;
@@ -284,9 +285,9 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 		auto start = instances.begin();
 		auto itr = instances.begin();
 		auto end = instances.end();
+		bool debug = false;
 		while(itr != end) {
-			CNLOG << std::distance(start,itr) << "/" << instances.size();
-
+			CNLOG << std::distance(start,itr) << "/" << instances.size() << " batch size = " << batch_size;
 
 			// (1) ensure we have same length in batch
 			auto batch_end = itr + batch_size;
@@ -298,6 +299,9 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 				last--;
 				batch_end = last + 1;
 			}
+			auto actual_batch_size = std::distance(itr,batch_end);
+			CNLOG << "actual batch size after len adjustments " << actual_batch_size;
+			trainer.clip_threshold = clip_threshold * actual_batch_size;
 
 			// (2) create the dists and store into one long vector 
 			auto tmp = itr;
@@ -311,20 +315,27 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 			}
 
 
-			if( 219284 == std::distance(start,itr) || 0 == std::distance(start,itr) ) {
-				print_batch(itr,batch_end,dists,dist_len);
-			}
-
 			dynet::ComputationGraph cg;
+			if(debug) {
+				cg.set_immediate_compute(true);
+				cg.set_check_validity(true);
+			}
 			auto train_start = std::chrono::high_resolution_clock::now();
 			auto loss_expr = lm.build_train_graph_batch(cg,itr,batch_end,dists,dist_len);
-			cg.backward(loss_expr);
-			trainer.update();
+			auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
+			try {
+				cg.backward(loss_expr);
+				trainer.update();
+				itr = batch_end;
+			} catch(std::runtime_error& e) {
+				CNLOG << "Exception: " << e.what();
+				lm.model.reset_gradient();
+				batch_size = 1;
+				debug = true;
+			}
 			auto train_end = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> train_diff = train_end-train_start;
-			CNLOG << "BACKWARD/UPDATE " << " - " << train_diff.count() << "s";
-
-			itr = batch_end;
+			CNLOG << "FORWARD/BACKWARD/UPDATE " << " - " << train_diff.count() << "s - loss = " << loss_float;
 		}
 		CNLOG << "finish epoch " << epoch;
 

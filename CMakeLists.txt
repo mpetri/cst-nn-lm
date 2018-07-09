@@ -29,6 +29,8 @@ endif()
 find_package(Boost COMPONENTS iostreams unit_test_framework filesystem system log log_setup date_time chrono program_options REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
+link_directories(/opt/intel/mkl/lib/intel64)
+link_directories(/opt/intel/compilers_and_libraries/linux/lib/intel64/)
 add_definitions(-DBOOST_LOG_DYN_LINK)
 
 add_subdirectory(external/eigen-git-mirror EXCLUDE_FROM_ALL)
