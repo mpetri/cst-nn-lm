@@ -3,6 +3,8 @@
 #include <future>
 #include <iomanip>
 
+#include <boost/progress.hpp>
+
 #include "dynet/nodes.h"
 #include "dynet/dynet.h"
 #include "dynet/training.h"
@@ -209,6 +211,7 @@ evaluate_pplx(language_model& lm,const vocab_t& vocab,std::string file)
 	double predictions = 0;
 	
 	auto corpus = data_loader::parse_file(vocab,file);
+	boost::progress_display show_progress(corpus.num_sentences);
 	for(size_t i=0;i<corpus.num_sentences;i++) {
 		auto start_sent = corpus.text.begin() + corpus.sent_starts[i];
 		auto sent_len = corpus.sent_lens[i];
@@ -217,6 +220,7 @@ evaluate_pplx(language_model& lm,const vocab_t& vocab,std::string file)
 		auto loss_expr = lm.build_valid_graph(cg,start_sent,sent_len);
 		loss += dynet::as_scalar(cg.forward(loss_expr));
 		predictions += sent_len - 1;
+		++show_progress;
 	}
 	return exp(loss / predictions);
 }
@@ -337,7 +341,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 			std::chrono::duration<double> train_diff = train_end-train_start;
 			CNLOG << "FORWARD/BACKWARD/UPDATE " << " - " << train_diff.count() << "s - loss = " << loss_float;
 		}
-		CNLOG << "finish epoch " << epoch;
+		CNLOG << "finish epoch. compute dev pplx " << epoch;
 
 		auto pplx = evaluate_pplx(lm,vocab,dev_corpus_file);
 		CNLOG << "epoch dev pplx = " << pplx;

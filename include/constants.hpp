@@ -8,5 +8,5 @@ namespace defaults {
 	size_t EPOCHS = 5;
 	size_t BATCH_SIZE = 20;
 	size_t THREADS = 16;
-	size_t THRESHOLD = 100;
+	size_t THRESHOLD = 50;
 }
