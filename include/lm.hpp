@@ -263,7 +263,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 	auto clip_threshold = trainer.clip_threshold;
 
 	for(size_t epoch = 1;epoch<=num_epochs;epoch++) {
-		CNLOG << "start epoch " << epoch;
+		CNLOG << "start epoch " << epoch << "/" << num_epochs;
 
 		// (1) explore the CST a bit as a start
 		CNLOG << "explore CST and create instances. threshold = " << threshold;
@@ -329,8 +329,10 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 			auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
 			if( std::distance(last_report,itr) > 8192 ) {
+				double percent = double(std::distance(start,itr)) / double(instances.size()) * 100;
 				last_report = itr;
-				CNLOG << std::distance(start,itr) << "/" << instances.size() 
+				CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "  
+					<< std::distance(start,itr) << "/" << instances.size() 
 					<< " batch_size = " << actual_batch_size
 					<< " FW/BW/UPDATE " << " - " 
 					<< time_per_instance << "ms/instance - loss = " << instance_loss;

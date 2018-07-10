@@ -1,1 +1,6 @@
 build
+data/*/*.txt
+data/*/*.tok
+data/*.shuffled
+data/*/*.shuffled
+data/*/*.sdsl
