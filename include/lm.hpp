@@ -259,8 +259,6 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 
 	auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
 
-	dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
-	auto clip_threshold = trainer.clip_threshold;
 
 	// (1) explore the CST a bit as a start
 	CNLOG << "explore CST and create instances. threshold = " << threshold;
@@ -283,6 +281,8 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 	std::sort(instances.begin(),instances.end());
 
 	for(size_t epoch = 1;epoch<=num_epochs;epoch++) {
+		dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
+		auto clip_threshold = trainer.clip_threshold;
 		CNLOG << "start epoch " << epoch << "/" << num_epochs;
 		std::vector<float> dists(batch_size*vocab.size());	
 		auto start = instances.begin();
