@@ -123,18 +123,13 @@ struct data_loader {
 
 	static vocab_t create_or_load_vocab(args_t& args)
 	{
+		auto train_file = path + "/" + constants::TRAIN_FILE;
 		auto path = args["path"].as<std::string>();
-		CNLOG << "\tcreate vocabulary";
 		auto threshold = args["vocab_size"].as<uint32_t>();
+		CNLOG << "\tcreate vocabulary with threshold = " << threshold << " from " << train_file;
 		vocab_t v;
 		v.max_size = threshold;
-		// auto vocab_file = path + "/" + constants::VOCAB_FILE;
-		// if (boost::filesystem::exists(vocab_file)) {
-		// 	v.load(vocab_file);
-		// 	return v;
-		// }
 
-		auto train_file = path + "/" + constants::TRAIN_FILE;
 		std::ifstream input(train_file);
 		input.imbue( std::locale( "C.UTF-8" ) );
 	    for (std::string line; std::getline(input, line); ) {

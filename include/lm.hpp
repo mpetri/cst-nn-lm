@@ -331,7 +331,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 				  << " FW/BW/UPDATE " << " - " 
 				  << time_per_instance << "ms/instance - loss = " << instance_loss;
 		}
-		CNLOG << "finish epoch. compute dev pplx " << epoch;
+		CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
 
 		auto pplx = evaluate_pplx(lm,vocab,dev_corpus_file);
 		CNLOG << "epoch dev pplx = " << pplx;
