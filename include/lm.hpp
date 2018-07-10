@@ -287,6 +287,7 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 		std::vector<float> dists(batch_size*vocab.size());
 		
 		auto start = instances.begin();
+		auto last_report = instances.begin();
 		auto itr = instances.begin();
 		auto end = instances.end();
 		while(itr != end) {
@@ -326,10 +327,14 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 			auto train_end = std::chrono::high_resolution_clock::now();
 			std::chrono::duration<double> train_diff = train_end-train_start;
 			auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
-			CNLOG << std::distance(start,itr) << "/" << instances.size() 
-				  << " batch_size = " << actual_batch_size
-				  << " FW/BW/UPDATE " << " - " 
-				  << time_per_instance << "ms/instance - loss = " << instance_loss;
+
+			if( std::distance(last_report,itr) > 8192 ) {
+				last_report = itr;
+				CNLOG << std::distance(start,itr) << "/" << instances.size() 
+					<< " batch_size = " << actual_batch_size
+					<< " FW/BW/UPDATE " << " - " 
+					<< time_per_instance << "ms/instance - loss = " << instance_loss;
+			}
 		}
 		CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
 
