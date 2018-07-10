@@ -63,6 +63,10 @@ int main(int argc,char** argv)
 	CNLOG << "parse arguments";
 	auto args = parse_args(argc,argv);
     auto out_directory = args["out_path"].as<std::string>();
+	if(boost::filesystem::create_directory(out_directory))
+	{
+		CNLOG<< "created output directory: "<< out_directory;
+	}
 
 	CNLOG << "load and parse train";
 	auto corpus = data_loader::load(args);
