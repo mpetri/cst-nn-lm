@@ -123,8 +123,8 @@ struct data_loader {
 
 	static vocab_t create_or_load_vocab(args_t& args)
 	{
-		auto train_file = path + "/" + constants::TRAIN_FILE;
 		auto path = args["path"].as<std::string>();
+		auto train_file = path + "/" + constants::TRAIN_FILE;
 		auto threshold = args["vocab_size"].as<uint32_t>();
 		CNLOG << "\tcreate vocabulary with threshold = " << threshold << " from " << train_file;
 		vocab_t v;
