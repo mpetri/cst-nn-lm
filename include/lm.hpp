@@ -262,36 +262,34 @@ language_model create_lm(const cst_type& cst,const vocab_t& vocab,args_t& args)
 	dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
 	auto clip_threshold = trainer.clip_threshold;
 
+	// (1) explore the CST a bit as a start
+	CNLOG << "explore CST and create instances. threshold = " << threshold;
+	auto prep_start = std::chrono::high_resolution_clock::now();
+	std::vector<train_instance_t> instances;
+	std::vector<std::future<std::vector<train_instance_t>>> results;
+	for(size_t thread=0;thread<threads;thread++) {
+		size_t start = vocab.start_sent_tok + thread;
+		results.push_back(std::async(std::launch::async,process_token_subtree,cst,vocab,start,threads,threshold));
+	}
+	for(auto& e : results) {
+		auto res = e.get();
+		instances.insert(instances.end(),res.begin(),res.end());
+	}
+	auto prep_end = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> prep_diff = prep_end-prep_start;
+	CNLOG << "CREATE EPOCH INSTANCES " << " - " << prep_diff.count() << "s";
+
+	CNLOG << "NUMBER OF INSTANCES = " << instances.size();
+	std::sort(instances.begin(),instances.end());
+
 	for(size_t epoch = 1;epoch<=num_epochs;epoch++) {
 		CNLOG << "start epoch " << epoch << "/" << num_epochs;
-
-		// (1) explore the CST a bit as a start
-		CNLOG << "explore CST and create instances. threshold = " << threshold;
-		auto prep_start = std::chrono::high_resolution_clock::now();
-		std::vector<train_instance_t> instances;
-		std::vector<std::future<std::vector<train_instance_t>>> results;
-		for(size_t thread=0;thread<threads;thread++) {
-			size_t start = vocab.start_sent_tok + thread;
-			results.push_back(std::async(std::launch::async,process_token_subtree,cst,vocab,start,threads,threshold));
-		}
-		for(auto& e : results) {
-			auto res = e.get();
-			instances.insert(instances.end(),res.begin(),res.end());
-		}
-		auto prep_end = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> prep_diff = prep_end-prep_start;
-		CNLOG << "CREATE EPOCH INSTANCES " << " - " << prep_diff.count() << "s";
-
-		CNLOG << "NUMBER OF INSTANCES = " << instances.size();
-		std::sort(instances.begin(),instances.end());
-		std::vector<float> dists(batch_size*vocab.size());
-		
+		std::vector<float> dists(batch_size*vocab.size());	
 		auto start = instances.begin();
 		auto last_report = instances.begin();
 		auto itr = instances.begin();
 		auto end = instances.end();
 		while(itr != end) {
-
 			// (1) ensure we have same length in batch
 			auto batch_end = itr + batch_size;
 			if(batch_end > end) {
