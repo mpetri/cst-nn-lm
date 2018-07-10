@@ -53,3 +53,10 @@ target_link_libraries(create_cst_nn_lm
   divsufsort64
   )
 
+add_executable(parse_input_files src/parse_input_files.cpp)
+target_link_libraries(parse_input_files
+  ${Boost_LIBRARIES}
+  dynet
+  divsufsort
+  divsufsort64
+  )
