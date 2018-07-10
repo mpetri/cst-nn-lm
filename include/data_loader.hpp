@@ -191,7 +191,7 @@ struct data_loader {
 		parse_text(c);
 		CNLOG << "\t\tnum tokens = " << c.num_tokens;
 		CNLOG << "\t\tnum sentences = " << c.num_sentences;
-		CNLOG << "\t\tnum oov = " << c.num_oov  << "("
+		CNLOG << "\t\tnum oov = " << c.num_oov  << " ("
 			  << std::fixed << std::setprecision(1) 
 			  << double(c.num_oov*100) / double(c.num_tokens) << "%)";
 		return c;
