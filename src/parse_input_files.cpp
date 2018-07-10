@@ -72,12 +72,12 @@ int main(int argc,char** argv)
 
 	CNLOG << "load and parse dev";
     auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
-	auto dev = data_loader::parse_file(vocab,dev_corpus_file);
+	auto dev = data_loader::parse_file(corpus.vocab,dev_corpus_file);
     write_sentences(dev,out_directory,constants::DEV_FILE);
 
 	CNLOG << "load and parse test";
     auto test_corpus_file = args["path"].as<std::string>() + "/" + constants::TEST_FILE;
-	auto test = data_loader::parse_file(vocab,test_corpus_file);
+	auto test = data_loader::parse_file(corpus.vocab,test_corpus_file);
     write_sentences(test,out_directory,constants::TEST_FILE);
 
 	return 0;
