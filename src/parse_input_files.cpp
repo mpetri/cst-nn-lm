@@ -47,11 +47,11 @@ write_sentences(corpus_t& corpus,std::string directory,std::string file_name)
 		auto sent_len = corpus.sent_lens[i];
         for(size_t j=0;j<sent_len-1;j++) {
             auto tok_id = *(start_sent + j);
-            auto str_tok = c.vocab.inverse_lookup(tok_id);
+            auto str_tok = corpus.vocab.inverse_lookup(tok_id);
             ofs << str_tok << " ";
         }
         auto tok_id = *(start_sent + sent_len - 1);
-        auto str_tok = c.vocab.inverse_lookup(tok_id);
+        auto str_tok = corpus.vocab.inverse_lookup(tok_id);
         ofs << str_tok << std::endl;
     }
 }
