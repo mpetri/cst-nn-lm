@@ -3,7 +3,7 @@ project(cst-nn-lm)
 
 cmake_host_system_information(RESULT current_host_name QUERY HOSTNAME)
 message("-- current_host_name: " ${current_host_name})
-if(${current_host_name} EQUAL "slug")
+if("${current_host_name}" MATCHES "^slug$")
   message("ENABLE CUDA AND SET CUDA 8.0 DIR")
   set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-8.0/")
   set(BACKEND "cuda")
