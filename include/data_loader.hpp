@@ -142,6 +142,7 @@ struct data_loader {
         input.imbue(std::locale("C.UTF-8"));
         for (std::string line; std::getline(input, line);) {
             auto toks = tokenize_line(line);
+            if(toks.size() > constants::MAX_SENTENCE_LEN) continue;
             for (const auto& tok : toks)
                 v.add_token(tok);
         }
@@ -157,6 +158,7 @@ struct data_loader {
         input.imbue(std::locale("C.UTF-8"));
         for (std::string line; std::getline(input, line);) {
             auto toks = tokenize_line(line);
+            if(toks.size() > constants::MAX_SENTENCE_LEN) continue;
             corpus.sent_starts.push_back(corpus.text.size());
             size_t slen = 1;
             corpus.text.push_back(corpus.vocab.start_sent_tok);
@@ -185,7 +187,9 @@ struct data_loader {
         parse_text(c);
         CNLOG << "\t\tnum tokens = " << c.num_tokens;
         CNLOG << "\t\tnum sentences = " << c.num_sentences;
-        CNLOG << "\t\tnum oov = " << c.num_oov;
+        CNLOG << "\t\tnum oov = " << c.num_oov << " ("
+              << std::fixed << std::setprecision(1)
+              << double(c.num_oov * 100) / double(c.num_tokens) << "%)";
         for (size_t i = 0; i < 100; i++) {
             auto str_tok = c.vocab.inverse_lookup(i);
             CNLOG << "\t\t" << i << " = " << str_tok;
