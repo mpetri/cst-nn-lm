@@ -17,6 +17,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <random>
 
 #include "constants.hpp"
 #include "data_loader.hpp"
@@ -29,14 +30,13 @@ struct instance_t {
     std::vector<uint32_t> sentence;
     size_t padding = 0;
     size_t real_len = 0;
-    bool operator<(const instance_t& other)
+    size_t rand = 0;
+    bool operator<(const instance_t& other) const
     {
-        if (sentence.size() == other.sentence.size()) {
-            size_t rand_A = rand();
-            size_t rand_B = rand();
-            return rand_A < rand_B;
+        if (real_len == other.real_len) {
+            return rand < other.rand;
         }
-        return sentence.size() < other.sentence.size();
+        return real_len < other.real_len;
     }
     template <class t_itr>
     instance_t(t_itr& itr, size_t len)
@@ -207,13 +207,18 @@ RNNBatchLanguageModel create_dynet_rnn_lm(const corpus_t& corpus, args_t& args)
     CNLOG << "NUMBER OF INSTANCES = " << instances.size();
     dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
     trainer.clip_threshold = trainer.clip_threshold * batch_size;
+    std::mt19937 gen(12345);
+    std::uniform_int_distribution<> dis(0,100000000);
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
 
         CNLOG << "shuffle instances";
         // (0) remove existing padding if necessary
+	size_t max_len = 0;
         for (auto& instance : instances) {
             instance.sentence.resize(instance.real_len);
+	    instance.padding = 0;
+	    instance.rand = dis(gen);
         }
         // (1) perform a random shuffle that respects sentence len
         std::sort(instances.begin(), instances.end());
@@ -224,11 +229,9 @@ RNNBatchLanguageModel create_dynet_rnn_lm(const corpus_t& corpus, args_t& args)
             auto padd_sym = corpus.vocab.stop_sent_tok;
             auto itr = instances.begin();
             auto end = instances.end();
-            while (itr < end) {
+            while (itr != end) {
                 auto batch_itr = itr;
-                auto batch_end = batch_itr + batch_size - 1;
-                if (batch_end >= end)
-                    batch_end = end - 1;
+                auto batch_end = batch_itr + std::min(batch_size,size_t(std::distance(itr,end))) - 1;
                 while (batch_itr->sentence.size() != batch_end->sentence.size()) {
                     size_t to_add = batch_end->sentence.size() - batch_itr->sentence.size();
                     for (size_t i = 0; i < to_add; i++) {
@@ -237,7 +240,7 @@ RNNBatchLanguageModel create_dynet_rnn_lm(const corpus_t& corpus, args_t& args)
                     }
                     ++batch_itr;
                 }
-                itr += batch_size;
+                itr = batch_end + 1;
             }
         }
 
@@ -247,10 +250,7 @@ RNNBatchLanguageModel create_dynet_rnn_lm(const corpus_t& corpus, args_t& args)
         auto itr = instances.begin();
         auto end = instances.end();
         while (itr != end) {
-            auto batch_end = itr + batch_size;
-            if (batch_end > end) {
-                batch_end = end;
-            }
+            auto batch_end = itr + std::min(batch_size,size_t(std::distance(itr,end)));
             auto actual_batch_size = std::distance(itr,batch_end);
 
             dynet::ComputationGraph cg;
