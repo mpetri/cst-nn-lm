@@ -1,6 +1,3 @@
-#include "cl-args.h"
-#include "dynet/io.h"
-
 #include <cassert>
 #include <chrono>
 #include <iostream>
@@ -56,8 +53,7 @@ int main(int argc, char** argv)
     auto corpus = data_loader::load(args);
 
     CNLOG << "create dynet rnn language model";
-    auto dyparams = dynet::extract_dynet_params(argc, argv);
-    dynet::initialize(dyparams);
+    dynet::initialize(argc, argv);
     auto lm = create_dynet_rnn_lm(corpus, args);
 
     CNLOG << "test language model";

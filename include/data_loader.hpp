@@ -12,6 +12,8 @@
 
 #include <sdsl/int_vector.hpp>
 
+#include "logging.hpp"
+
 namespace po = boost::program_options;
 using args_t = po::variables_map;
 

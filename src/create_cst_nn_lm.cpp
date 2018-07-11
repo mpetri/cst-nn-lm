@@ -56,8 +56,7 @@ int main(int argc, char** argv)
     auto cst = build_or_load_cst(corpus, args);
 
     CNLOG << "create language model";
-    auto dyparams = dynet::extract_dynet_params(argc, argv);
-    dynet::initialize(dyparams);
+    dynet::initialize(argc, argv);
     auto lm = create_lm(cst, corpus.vocab, args);
 
     CNLOG << "test language model";
