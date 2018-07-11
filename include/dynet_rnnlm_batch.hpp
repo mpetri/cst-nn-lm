@@ -242,7 +242,6 @@ RNNBatchLanguageModel create_dynet_rnn_lm(const corpus_t& corpus, args_t& args)
         }
 
         CNLOG << "start training...";
-        std::vector<float> dists(batch_size * vocab.size());
         auto start = instances.begin();
         auto last_report = instances.begin();
         auto itr = instances.begin();
@@ -256,8 +255,8 @@ RNNBatchLanguageModel create_dynet_rnn_lm(const corpus_t& corpus, args_t& args)
             dynet::ComputationGraph cg;
             auto train_start = std::chrono::high_resolution_clock::now();
             auto loss_tuple = lm.build_train_graph_batch(cg, itr, batch_end);
-            auto loss_expr = loss_tuple.first;
-            auto num_predictions = loss_tuple.second;
+            auto loss_expr = std::get<0>(loss_tuple);
+            auto num_predictions = std::get<1>(loss_tuple);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
             auto instance_loss = loss_float / num_predictions;
             cg.backward(loss_expr);
