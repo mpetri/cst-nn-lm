@@ -278,7 +278,7 @@ RNNBatchLanguageModel create_dynet_rnn_lm(const corpus_t& corpus, args_t& args)
         }
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
 
-        auto pplx = evaluate_pplx(lm, vocab, dev_corpus_file);
+        auto pplx = evaluate_pplx(lm, corpus.vocab, dev_corpus_file);
         CNLOG << "epoch dev pplx = " << pplx;
     }
 
