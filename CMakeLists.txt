@@ -5,6 +5,7 @@ cmake_host_system_information(RESULT current_host_name QUERY HOSTNAME)
 message("-- current_host_name: " ${current_host_name})
 if(${current_host_name} EQUAL "slug")
   set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-8.0/")
+  set(BACKEND "cuda")
 endif()
 
 set(CMAKE_CXX_STANDARD 14)
