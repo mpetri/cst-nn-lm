@@ -9,5 +9,8 @@ size_t EPOCHS = 20;
 size_t BATCH_SIZE = 32;
 size_t THREADS = 16;
 size_t THRESHOLD = 10;
+}
+
+namespace constants {
 size_t MAX_SENTENCE_LEN = 128;
 }
