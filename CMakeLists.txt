@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 2.8)
 project(cst-nn-lm)
 
+cmake_host_system_information(RESULT current_host_name QUERY HOSTNAME)
+message("-- current_host_name: " ${current_host_name})
+if(${current_host_name} EQUAL "slug")
+  set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-8.0/")
+endif()
+
 set(CMAKE_CXX_STANDARD 14)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -53,10 +59,10 @@ target_link_libraries(create_cst_nn_lm
   divsufsort64
   )
 
-add_executable(parse_input_files src/parse_input_files.cpp)
-target_link_libraries(parse_input_files
-  ${Boost_LIBRARIES}
-  dynet
-  divsufsort
-  divsufsort64
-  )
+  add_executable(create_dynet_rnn_lm src/create_dynet_rnn_lm.cpp)
+  target_link_libraries(create_dynet_rnn_lm
+    ${Boost_LIBRARIES}
+    dynet
+    divsufsort
+    divsufsort64
+    )
