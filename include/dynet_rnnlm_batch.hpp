@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/progress.hpp>
+
 #include "dynet/dict.h"
 #include "dynet/dynet.h"
 #include "dynet/expr.h"
@@ -47,7 +49,6 @@ struct instance_t {
 };
 
 struct RNNBatchLanguageModel {
-protected:
     ParameterCollection model;
 
     // Hyper-parameters
@@ -65,16 +66,6 @@ protected:
     Expression i_bias;
     LSTMBuilder rnn;
 
-public:
-    /**
-   * \brief Constructor for the batched RNN language model
-   *
-   * \param model ParameterCollection to hold all parameters for training
-   * \param LAYERS Number of layers of the RNN
-   * \param INPUT_DIM Embedding dimension for the words
-   * \param HIDDEN_DIM Dimension of the hidden states
-   * \param VOCAB_SIZE Size of the input vocabulary
-   */
     RNNBatchLanguageModel(const vocab_t& vocab, args_t& args)
     {
         LAYERS = args["layers"].as<uint32_t>();
@@ -163,10 +154,10 @@ public:
             auto i_err = dynet::pickneglogsoftmax(i_r_t, next_tok);
             errs.push_back(i_err);
             // Change input
-            last_arr = next_arr;
+            current_tok = next_tok;
         }
         // Add all errors
-        return { sum_batches(sum(errs)), actual_predictions };
+        return std::make_tuple(sum_batches(sum(errs)), actual_predictions);
     }
 };
 
@@ -191,11 +182,11 @@ evaluate_pplx(RNNBatchLanguageModel& lm, const vocab_t& vocab, std::string file)
     return exp(loss / predictions);
 }
 
-RNNBatchLanguageModel create_lm(const corpus_t& corpus, args_t& args)
+RNNBatchLanguageModel create_dynet_rnn_lm(const corpus_t& corpus, args_t& args)
 {
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
-    RNNBatchLanguageModel lm(vocab, args);
+    RNNBatchLanguageModel lm(corpus.vocab, args);
 
     auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
 
@@ -206,7 +197,7 @@ RNNBatchLanguageModel create_lm(const corpus_t& corpus, args_t& args)
     for (size_t i = 0; i < corpus.num_sentences; i++) {
         auto start_sent = corpus.text.begin() + corpus.sent_starts[i];
         size_t sent_len = corpus.sent_lens[i];
-        instances.emplace_back(start_setn, sent_len);
+        instances.emplace_back(start_sent, sent_len);
     }
     auto prep_end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> prep_diff = prep_end - prep_start;
@@ -229,23 +220,25 @@ RNNBatchLanguageModel create_lm(const corpus_t& corpus, args_t& args)
 
         // (2) add padding to instances in the same batch if necessary
         CNLOG << "add padding to instances in batch";
-        auto padd_sym = corpus.vocab.stop_sent_tok;
-        auto itr = instances.begin();
-        auto end = instances.end();
-        while (itr < end) {
-            auto batch_itr = itr;
-            auto batch_end = batch_itr + batch_size - 1;
-            if (batch_end >= end)
-                batch_end = end - 1;
-            while (batch_itr->sentence.size() != batch_end->sentence.size()) {
-                size_t to_add = batch_end->sentence.size() - batch_itr->sentence.size();
-                for (size_t i = 0; i < to_add; i++) {
-                    batch_itr->sentence.push_back(padd_sym);
-                    batch_itr->padding++;
+        {
+            auto padd_sym = corpus.vocab.stop_sent_tok;
+            auto itr = instances.begin();
+            auto end = instances.end();
+            while (itr < end) {
+                auto batch_itr = itr;
+                auto batch_end = batch_itr + batch_size - 1;
+                if (batch_end >= end)
+                    batch_end = end - 1;
+                while (batch_itr->sentence.size() != batch_end->sentence.size()) {
+                    size_t to_add = batch_end->sentence.size() - batch_itr->sentence.size();
+                    for (size_t i = 0; i < to_add; i++) {
+                        batch_itr->sentence.push_back(padd_sym);
+                        batch_itr->padding++;
+                    }
+                    ++batch_itr;
                 }
-                ++batch_itr;
+                itr += batch_size;
             }
-            itr += batch_size;
         }
 
         CNLOG << "start training...";
