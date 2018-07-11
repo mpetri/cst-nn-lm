@@ -12,6 +12,7 @@
 
 #include <sdsl/int_vector.hpp>
 
+#include "constants.hpp"
 #include "logging.hpp"
 
 namespace po = boost::program_options;
