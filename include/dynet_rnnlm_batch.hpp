@@ -97,7 +97,7 @@ struct RNNBatchLanguageModel {
         i_R = dynet::parameter(cg, p_R);
         i_bias = dynet::parameter(cg, p_bias);
 
-        std::vector<dynet::Expression> erros(len - 1);
+        std::vector<dynet::Expression> errors(len - 1);
         for (size_t i = 0; i < len - 1; i++) {
             auto cur_sym = *itr++;
             auto next_sym = *itr;
@@ -106,7 +106,7 @@ struct RNNBatchLanguageModel {
             dynet::Expression i_r_t = i_bias + i_R * i_y_t;
             erros[i] = pickneglogsoftmax(i_r_t, next_sym);
         }
-        return dynet::sum(erros);
+        return dynet::sum(errors);
     }
 
     template <class t_itr>
@@ -251,6 +251,7 @@ RNNBatchLanguageModel create_dynet_rnn_lm(const corpus_t& corpus, args_t& args)
             if (batch_end > end) {
                 batch_end = end;
             }
+            auto actual_batch_size = std::distance(itr,batch_end);
 
             dynet::ComputationGraph cg;
             auto train_start = std::chrono::high_resolution_clock::now();
@@ -264,14 +265,14 @@ RNNBatchLanguageModel create_dynet_rnn_lm(const corpus_t& corpus, args_t& args)
             itr = batch_end;
             auto train_end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> train_diff = train_end - train_start;
-            auto time_per_instance = train_diff.count() / batch_size * 1000.0;
+            auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
-            if (std::distance(last_report, itr) > 8192) {
+            if (std::distance(last_report, itr) > 8192 || batch_end == end) {
                 double percent = double(std::distance(start, itr)) / double(instances.size()) * 100;
                 last_report = itr;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << std::distance(start, itr) << "/" << instances.size()
-                      << " batch_size = " << batch_size
+                      << " batch_size = " << actual_batch_size
                       << " FW/BW/UPDATE  - "
                       << time_per_instance << "ms/instance - loss = " << instance_loss;
             }
