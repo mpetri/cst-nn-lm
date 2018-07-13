@@ -22,6 +22,8 @@ po::variables_map parse_args(int argc, char** argv)
         ("layers", po::value<uint32_t>()->default_value(defaults::LAYERS), "layers of the rnn")
         ("input_dim", po::value<uint32_t>()->default_value(defaults::INPUT_DIM), "input embedding size")
         ("hidden_dim", po::value<uint32_t>()->default_value(defaults::HIDDEN_DIM), "hidden size")
+        ("threshold", po::value<uint32_t>()->default_value(defaults::THRESHOLD), "cst threshold")
+        ("threads", po::value<uint32_t>()->default_value(defaults::THREADS), "threads")
         ("epochs", po::value<size_t>()->default_value(defaults::EPOCHS), "num epochs")
         ("batch_size", po::value<size_t>()->default_value(defaults::BATCH_SIZE), "batch size");
     // clang-format on
