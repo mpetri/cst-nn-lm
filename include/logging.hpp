@@ -23,7 +23,6 @@ void init_logging()
 {
     boost::log::core::get()->remove_all_sinks();
     boost::log::core::get()->add_global_attribute("TimeStamp", boost::log::attributes::local_clock());
-    boost::log::core::get()->auto_flush(true);
     logging::add_console_log(std::cout, boost::log::keywords::auto_flush = true, keywords::format = "[%TimeStamp%]: %Message%");
     std::cout.imbue(std::locale("en_US.UTF-8"));
 }
