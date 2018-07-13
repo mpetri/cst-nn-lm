@@ -1,12 +1,12 @@
+#include <cassert>
 #include <chrono>
 #include <iostream>
 
 #include <boost/program_options.hpp>
 
 #include "constants.hpp"
-#include "cst.hpp"
 #include "data_loader.hpp"
-#include "lm.hpp"
+#include "dynet_rnnlm_batch.hpp"
 #include "logging.hpp"
 
 namespace po = boost::program_options;
@@ -52,12 +52,9 @@ int main(int argc, char** argv)
     CNLOG << "load and parse data";
     auto corpus = data_loader::load(args);
 
-    CNLOG << "build or load CST";
-    auto cst = build_or_load_cst(corpus, args);
-
-    CNLOG << "create language model";
+    CNLOG << "create dynet rnn language model";
     dynet::initialize(argc, argv);
-    auto lm = create_lm(cst, corpus.vocab, args);
+    auto lm = create_dynet_rnn_lm(corpus, args);
 
     CNLOG << "test language model";
     auto test_corpus_file = args["path"].as<std::string>() + "/" + constants::TEST_FILE;
