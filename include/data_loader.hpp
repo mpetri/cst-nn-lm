@@ -140,7 +140,7 @@ struct data_loader {
         v.max_size = threshold;
 
         std::ifstream input(train_file);
-        input.imbue(std::locale("C.UTF-8"));
+        input.imbue(std::locale("en_US.UTF-8"));
         for (std::string line; std::getline(input, line);) {
             auto toks = tokenize_line(line);
             if(toks.size() > constants::MAX_SENTENCE_LEN) continue;
@@ -156,7 +156,7 @@ struct data_loader {
         CNLOG << "\tparse text " << corpus.file;
         auto train_file = corpus.file;
         std::ifstream input(train_file);
-        input.imbue(std::locale("C.UTF-8"));
+        input.imbue(std::locale("en_US.UTF-8"));
         for (std::string line; std::getline(input, line);) {
             auto toks = tokenize_line(line);
             if(toks.size() > constants::MAX_SENTENCE_LEN) continue;
