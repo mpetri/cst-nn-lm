@@ -335,7 +335,7 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
             std::chrono::duration<double> train_diff = train_end - train_start;
             auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
-            if (std::distance(last_report, itr) > 8192 || batch_end == end) {
+            if (std::distance(last_report, itr) > 32768 || batch_end == end) {
                 double percent = double(std::distance(start, itr)) / double(instances.size()) * 100;
                 last_report = itr;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
