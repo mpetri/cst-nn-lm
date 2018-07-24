@@ -188,7 +188,7 @@ std::vector<float> compute_batch_losses(const cst_type& cst,const corpus_t& corp
     size_t sentence_len = itr->sentence.size();
     
     std::vector<std::vector<float>> losses(sentence_len);
-    for(size_t i=0;i<losses.size()) losses[i].reserve(corpus.vocab.size()*batch_size);
+    for(size_t i=0;i<losses.size();i++) losses[i].reserve(corpus.vocab.size()*batch_size);
 
     for(size_t k=0;k<batch_size;k++) {
         auto instance = *itr;
@@ -293,7 +293,7 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
             auto batch_end = itr + std::min(batch_size,size_t(std::distance(itr,end)));
             auto actual_batch_size = std::distance(itr,batch_end);
 
-            auto batch_losses = compute_batch_losses(cst,itr,batch_end);
+            auto batch_losses = compute_batch_losses(cst,corpus,itr,batch_end);
 
             dynet::ComputationGraph cg;
             auto train_start = std::chrono::high_resolution_clock::now();
