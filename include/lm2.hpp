@@ -320,7 +320,6 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
             auto batch_loss_end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double>  batch_loss_diff = batch_loss_end - batch_loss_start;
             auto time_per_loss_instance = batch_loss_diff.count() / actual_batch_size * 1000.0;
-            CNLOG << "compute loss time = " << time_per_loss_instance << "ms/instance";
 
             dynet::ComputationGraph cg;
             auto train_start = std::chrono::high_resolution_clock::now();
@@ -335,7 +334,6 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
             auto train_end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> train_diff = train_end - train_start;
             auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
-            CNLOG << "training time = " << time_per_instance << "ms/instance";
 
             if (std::distance(last_report, itr) > 8192 || batch_end == end) {
                 double percent = double(std::distance(start, itr)) / double(instances.size()) * 100;
@@ -343,7 +341,8 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << std::distance(start, itr) << "/" << instances.size()
                       << " batch_size = " << actual_batch_size
-                      << " FW/BW/UPDATE  - "
+                      << " FW/BW/UPDATE  - loss_comp "
+                      << time_per_loss_instance << "ms/instance | train ";
                       << time_per_instance << "ms/instance - loss = " << instance_loss;
             }
         }
