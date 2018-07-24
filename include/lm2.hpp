@@ -183,7 +183,7 @@ evaluate_pplx(language_model2& lm, const vocab_t& vocab, std::string file)
 }
 
 template<class t_itr>
-std::vector<float> compute_batch_losses(const cst_type& cst,const corpus_t& corpus,t_itr itr,t_itr end) {
+std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const corpus_t& corpus,t_itr itr,t_itr end) {
     size_t batch_size = std::distance(itr, end);
     size_t sentence_len = itr->sentence.size();
     
@@ -193,7 +193,7 @@ std::vector<float> compute_batch_losses(const cst_type& cst,const corpus_t& corp
     for(size_t k=0;k<batch_size;k++) {
         auto instance = *itr;
         auto cur_node = cst.root();
-        for(size_t i=0;i<instance.size()-1;i++) {
+        for(size_t i=0;i<instance.sentence.size()-1;i++) {
             auto& tok = instance.sentence[i];
             auto instance_loss_itr = losses[i].begin() + (corpus.vocab.size() * k);
             size_t char_pos;
@@ -297,7 +297,7 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 
             dynet::ComputationGraph cg;
             auto train_start = std::chrono::high_resolution_clock::now();
-            auto loss_tuple = lm.build_train_graph_batch(cg, itr, batch_end,batch_losses,corpus.vocab.size());
+            auto loss_tuple = lm.build_train_graph_batch(cg, itr, batch_end,batch_losses);
             auto loss_expr = std::get<0>(loss_tuple);
             auto num_predictions = std::get<1>(loss_tuple);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
