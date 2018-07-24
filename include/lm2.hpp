@@ -342,7 +342,7 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
                       << std::distance(start, itr) << "/" << instances.size()
                       << " batch_size = " << actual_batch_size
                       << " FW/BW/UPDATE  - loss_comp "
-                      << time_per_loss_instance << "ms/instance | train ";
+                      << time_per_loss_instance << "ms/instance | train "
                       << time_per_instance << "ms/instance - loss = " << instance_loss;
             }
         }
