@@ -11,6 +11,7 @@ endif()
 if("${current_host_name}" MATCHES "^spartan")
   message("-- ENABLE CUDA AND SET CUDA 9.0 DIR")
   set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/easybuild/software/CUDA/9.1.85")
+  set(CUDNN_ROOT "/usr/local/easybuild/software/cuDNN/7.1-GCC-6.2.0-CUDA-9.1.85")
   set(BACKEND "cuda")
 endif()
 
@@ -66,7 +67,7 @@ target_link_libraries(create_cst_nn_lm
   divsufsort64
   )
 
-add_executable(create_cst_nn_lm src/create_cst_nn_lm2.cpp)
+add_executable(create_cst_nn_lm2 src/create_cst_nn_lm2.cpp)
 target_link_libraries(create_cst_nn_lm2
   ${Boost_LIBRARIES}
   dynet
