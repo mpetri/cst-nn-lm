@@ -186,6 +186,8 @@ template<class t_itr>
 std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const corpus_t& corpus,t_itr itr,t_itr end) {
     size_t batch_size = std::distance(itr, end);
     size_t sentence_len = itr->sentence.size();
+
+    static std::unordered_map<uint64_t,std::vector<float>> loss_cache;
     
     std::vector<std::vector<float>> losses(sentence_len);
     for(size_t i=0;i<losses.size();i++) losses[i].resize(corpus.vocab.size()*batch_size);
@@ -207,12 +209,32 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
                 }
                 break;
             } else {
-                auto node_depth = cst.depth(cur_node);
                 double node_size = cst.size(cur_node);
-                for (const auto& child : cst.children(cur_node)) {
-                    auto tok = cst.edge(child, node_depth + 1);
-                    double size = cst.size(child);
-                    *(instance_loss_itr + tok) = size / node_size;
+                if(node_size > 25) {
+                    auto node_id = cst.id(cur_node);
+                    auto itr = loss_cache.find(node_id);
+                    if(itr != loss_cache.end()) {
+                        auto& stored_loss = itr->second;
+                        for(size_t i=0;i<stored_loss.size();i++) *(instance_loss_itr + i) = stored_loss[i];
+                    } else {
+                        std::vector<float> stored_loss(corpus.vocab.size());
+                        auto node_depth = cst.depth(cur_node);
+                        for (const auto& child : cst.children(cur_node)) {
+                            auto tok = cst.edge(child, node_depth + 1);
+                            double size = cst.size(child);
+                            *(instance_loss_itr + tok) = size / node_size;
+                            stored_loss[tok] = size / node_size;
+                        }
+                        loss_cache[node_id] = stored_loss;
+                    }
+                } else {
+                    auto node_depth = cst.depth(cur_node);
+                    double node_size = cst.size(cur_node);
+                    for (const auto& child : cst.children(cur_node)) {
+                        auto tok = cst.edge(child, node_depth + 1);
+                        double size = cst.size(child);
+                        *(instance_loss_itr + tok) = size / node_size;
+                    }
                 }
             }
         }
