@@ -22,17 +22,25 @@
 
 using cst_node_type = typename cst_type::node_type;
 
-struct train_instance_t {
-    size_t num_occ;
-    cst_node_type cst_node;
-    size_t num_children;
-    std::vector<uint32_t> prefix;
-    bool operator<(const train_instance_t& other) const
+struct instance_t {
+    std::vector<uint32_t> sentence;
+    size_t padding = 0;
+    size_t real_len = 0;
+    size_t rand = 0;
+    bool operator<(const instance_t& other) const
     {
-        if (prefix.size() == other.prefix.size()) {
-            return num_occ > other.num_occ;
+        if (real_len == other.real_len) {
+            return rand < other.rand;
         }
-        return prefix.size() < other.prefix.size();
+        return real_len < other.real_len;
+    }
+    template <class t_itr>
+    instance_t(t_itr& itr, size_t len)
+    {
+        for (size_t i = 0; i < len; i++) {
+            sentence.push_back(*itr++);
+        }
+        real_len = len;
     }
 };
 
@@ -70,8 +78,8 @@ struct language_model2 {
     }
 
     template <class t_itr>
-    std::tuple<dynet::Expression, size_t> build_train_graph_batch_ngram(dynet::ComputationGraph& cg, t_itr& start, t_itr& end,
-        std::vector<std::vector<float>>& dists, size_t dist_len)
+    std::tuple<dynet::Expression, size_t> build_train_graph_batch(dynet::ComputationGraph& cg, t_itr& start, t_itr& end,
+        std::vector<std::vector<float>>& dists)
     {
         size_t batch_size = std::distance(start, end);
         size_t sentence_len = start->sentence.size();
@@ -176,8 +184,8 @@ evaluate_pplx(language_model2& lm, const vocab_t& vocab, std::string file)
 
 template<class t_itr>
 std::vector<float> compute_batch_losses(const cst_type& cst,const corpus_t& corpus,t_itr itr,t_itr end) {
-    size_t batch_size = std::distance(start, end);
-    size_t sentence_len = start->size();
+    size_t batch_size = std::distance(itr, end);
+    size_t sentence_len = itr->sentence.size();
     
     std::vector<std::vector<float>> losses(sentence_len);
     for(size_t i=0;i<losses.size()) losses[i].reserve(corpus.vocab.size()*batch_size);
@@ -186,16 +194,16 @@ std::vector<float> compute_batch_losses(const cst_type& cst,const corpus_t& corp
         auto instance = *itr;
         auto cur_node = cst.root();
         for(size_t i=0;i<instance.size()-1;i++) {
-            auto& tok = instance[i];
+            auto& tok = instance.sentence[i];
             auto instance_loss_itr = losses[i].begin() + (corpus.vocab.size() * k);
             size_t char_pos;
             cur_node = cst.child(cur_node,tok,char_pos);
             if(cst.is_leaf(cur_node)) {
                 // everything else is one hot
-                *(instance_loss_itr + instance[i+1]) = 1;
-                for(size_t j=i+1;j<instance.size()-1;j++) {
+                *(instance_loss_itr + instance.sentence[i+1]) = 1;
+                for(size_t j=i+1;j<instance.sentence.size()-1;j++) {
                     instance_loss_itr = losses[j].begin() + (corpus.vocab.size() * k);
-                    *(instance_loss_itr + instance[j+1]) = 1;
+                    *(instance_loss_itr + instance.sentence[j+1]) = 1;
                 }
                 break;
             } else {
@@ -218,7 +226,7 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 {
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
-    RNNBatchLanguageModel lm(corpus.vocab, args);
+    language_model2 lm(corpus.vocab, args);
 
     auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
 
