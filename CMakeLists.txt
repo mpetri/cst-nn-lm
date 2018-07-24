@@ -8,6 +8,11 @@ if("${current_host_name}" MATCHES "^slug$")
   set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-8.0/")
   set(BACKEND "cuda")
 endif()
+if("${current_host_name}" MATCHES "^spartan")
+  message("-- ENABLE CUDA AND SET CUDA 9.0 DIR")
+  set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/easybuild/software/CUDA/9.1.85")
+  set(BACKEND "cuda")
+endif()
 
 set(CMAKE_CXX_STANDARD 14)
 
