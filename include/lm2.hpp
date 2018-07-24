@@ -188,7 +188,7 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
     size_t sentence_len = itr->sentence.size();
     
     std::vector<std::vector<float>> losses(sentence_len);
-    for(size_t i=0;i<losses.size();i++) losses[i].reserve(corpus.vocab.size()*batch_size);
+    for(size_t i=0;i<losses.size();i++) losses[i].resize(corpus.vocab.size()*batch_size);
 
     for(size_t k=0;k<batch_size;k++) {
         auto instance = *itr;
