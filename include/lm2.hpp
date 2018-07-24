@@ -71,7 +71,7 @@ struct language_model2 {
 
     template <class t_itr>
     std::tuple<dynet::Expression, size_t> build_train_graph_batch_ngram(dynet::ComputationGraph& cg, t_itr& start, t_itr& end,
-        std::vector<float>& dists, size_t dist_len)
+        std::vector<std::vector<float>>& dists, size_t dist_len)
     {
         size_t batch_size = std::distance(start, end);
         size_t sentence_len = start->sentence.size();
@@ -85,7 +85,7 @@ struct language_model2 {
         i_R = parameter(cg, p_R);
         i_bias = parameter(cg, p_bias);
         // Initialize variables for batch errors
-        std::vector<Expression> errs;
+        std::vector<dynet::Expression> errs;
 
         // Set all inputs to the SOS symbol
         auto sos_tok = start->sentence.front();
@@ -99,7 +99,6 @@ struct language_model2 {
             actual_predictions += (instance->real_len - 1);
         }
 
-        float* dist_ptr = dists.data();
 
         for (size_t i = 0; i < sentence_len - 1; ++i) {
             for (size_t j = 0; j < batch_size; j++) {
@@ -116,12 +115,11 @@ struct language_model2 {
 
             // Compute error for each member of the batch
             dynet::Expression i_pred = -dynet::log_softmax(i_r_t);
-            dynet::Expression i_pred_linear = dynet::reshape(i_pred, { (unsigned int)(dist_len*batch_size) });
-            dynet::Expression i_true = dynet::input(cg, { (unsigned int)(dist_len*batch_size) }, dist_ptr);
+            dynet::Expression i_pred_linear = dynet::reshape(i_pred, { (unsigned int) dists[i].size() });
+            dynet::Expression i_true = dynet::input(cg, { (unsigned int)dists[i].size() }, dists[i]);
             dynet::Expression i_error = dynet::transpose(i_true) * i_pred_linear;
-            dist_ptr += (dist_len*batch_size);
             errs.push_back(i_error);
-            
+
             // Change input
             current_tok = next_tok;
         }
@@ -155,79 +153,6 @@ struct language_model2 {
     }
 };
 
-std::string
-print_prefix(std::vector<uint32_t>& prefix, const vocab_t& vocab)
-{
-    std::string s = "[";
-    for (size_t i = 0; i < prefix.size() - 1; i++) {
-        s += vocab.inverse_lookup(prefix[i]) + " ";
-    }
-    return s + vocab.inverse_lookup(prefix.back()) + "]";
-}
-
-std::vector<train_instance_t>
-create_instances(const cst_type& cst, const vocab_t& vocab, cst_node_type cst_node, std::vector<uint32_t> prefix, size_t threshold)
-{
-    std::vector<train_instance_t> instances;
-    if (prefix.back() < vocab.start_sent_tok)
-        return instances;
-
-    double node_size = cst.size(cst_node);
-    if (node_size >= threshold) {
-        train_instance_t new_instance;
-        new_instance.num_occ = node_size;
-        new_instance.prefix = prefix;
-        new_instance.cst_node = cst_node;
-        new_instance.num_children = 0;
-        auto node_depth = cst.depth(cst_node);
-        for (const auto& child : cst.children(cst_node)) {
-            auto tok = cst.edge(child, node_depth + 1);
-            double size = cst.size(child);
-            if (tok != vocab.start_sent_tok && tok != vocab.stop_sent_tok && size >= threshold) {
-                auto child_prefix = prefix;
-                child_prefix.push_back(tok);
-                auto child_instances = create_instances(cst, vocab, child, child_prefix, threshold);
-                instances.insert(instances.end(), child_instances.begin(), child_instances.end());
-            }
-            new_instance.num_children++;
-        }
-        instances.push_back(new_instance);
-    }
-    return instances;
-}
-
-template <class t_dist_itr>
-void create_dist(const cst_type& cst, const train_instance_t& instance, t_dist_itr dist_itr, size_t vocab_size)
-{
-    double node_size = instance.num_occ;
-    auto node_depth = cst.depth(instance.cst_node);
-    for (size_t i = 0; i < vocab_size; i++) {
-        *(dist_itr + i) = 0;
-    }
-    for (const auto& child : cst.children(instance.cst_node)) {
-        auto tok = cst.edge(child, node_depth + 1);
-        double size = cst.size(child);
-        *(dist_itr + tok) = size / node_size;
-    }
-}
-
-std::vector<train_instance_t>
-process_token_subtree(const cst_type& cst, const vocab_t& vocab, size_t start, size_t step, size_t threshold)
-{
-    std::vector<train_instance_t> instances;
-    for (size_t j = start; j < vocab.size(); j += step) {
-        size_t lb = cst.csa.C[j];
-        size_t rb = cst.csa.C[j + 1] - 1;
-        if (rb - lb + 1 >= threshold) {
-            auto cst_node = cst.node(lb, rb);
-            std::vector<uint32_t> prefix(1, j);
-            auto subtree_instances = create_instances(cst, vocab, cst_node, prefix, threshold);
-            instances.insert(instances.end(), subtree_instances.begin(), subtree_instances.end());
-        }
-    }
-    return instances;
-}
-
 double
 evaluate_pplx(language_model2& lm, const vocab_t& vocab, std::string file)
 {
@@ -249,54 +174,28 @@ evaluate_pplx(language_model2& lm, const vocab_t& vocab, std::string file)
     return exp(loss / predictions);
 }
 
-template <class t_itr>
-void print_batch(t_itr& start, t_itr& end, std::vector<float>& dists, size_t dist_len)
-{
-    std::cout << "====================================================" << std::endl;
-    size_t batch_size = std::distance(start, end);
-    size_t vocab_size = dist_len / batch_size;
-    for (size_t i = 0; i < batch_size; i++) {
-        auto instance = start + i;
-        auto dist = dists.begin() + (i * vocab_size);
-        std::cout << std::setw(3) << i << " - " << instance->num_occ << " - " << instance->num_children << " [";
-        for (size_t j = 0; j < instance->prefix.size() - 1; j++) {
-            std::cout << instance->prefix[j] << ",";
-        }
-        std::cout << instance->prefix.back() << "] - <";
-        for (size_t j = 0; j < vocab_size; j++) {
-            if (dist[j] != 0) {
-                std::cout << j << ":" << dist[j] << ",";
-            }
-        }
-        std::cout << ">" << std::endl;
-    }
-    std::cout << "====================================================" << std::endl;
-}
-
 template<class t_itr>
 std::vector<float> compute_batch_losses(const cst_type& cst,const corpus_t& corpus,t_itr itr,t_itr end) {
-    std::vector<float> losses;
-    losses.reserve(std::distance(itr,end)*corpus.vocab.size());
-    std::vector<float> instance_loss(corpus.vocab.size());
-    while(itr != end) {
+    size_t batch_size = std::distance(start, end);
+    size_t sentence_len = start->size();
+    
+    std::vector<std::vector<float>> losses(sentence_len);
+    for(size_t i=0;i<losses.size()) losses[i].reserve(corpus.vocab.size()*batch_size);
+
+    for(size_t k=0;k<batch_size;k++) {
         auto instance = *itr;
         auto cur_node = cst.root();
         for(size_t i=0;i<instance.size()-1;i++) {
             auto& tok = instance[i];
-            auto instance_loss_itr = instance_loss.begin();
-            for (size_t i = 0; i < vocab_size; i++) {
-                *(instance_loss_itr + i) = 0;
-            }
+            auto instance_loss_itr = losses[i].begin() + (corpus.vocab.size() * k);
             size_t char_pos;
             cur_node = cst.child(cur_node,tok,char_pos);
             if(cst.is_leaf(cur_node)) {
                 // everything else is one hot
-                instance_loss[ instance[i+1] ] = 1;
-                std::copy(instance_loss.begin(),instance_loss.end(),std::back_inserter(losses));
+                *(instance_loss_itr + instance[i+1]) = 1;
                 for(size_t j=i+1;j<instance.size()-1;j++) {
-                    std::vector<float> one_hot_loss(corpus.vocab.size());
-                    one_hot_loss[ instance[j+1] ] = 1;
-                    std::copy(one_hot_loss.begin(),one_hot_loss.end(),std::back_inserter(losses));
+                    instance_loss_itr = losses[j].begin() + (corpus.vocab.size() * k);
+                    *(instance_loss_itr + instance[j+1]) = 1;
                 }
                 break;
             } else {
@@ -307,7 +206,6 @@ std::vector<float> compute_batch_losses(const cst_type& cst,const corpus_t& corp
                     double size = cst.size(child);
                     *(instance_loss_itr + tok) = size / node_size;
                 }
-                std::copy(instance_loss.begin(),instance_loss.end(),std::back_inserter(losses));
             }
         }
         ++itr;
@@ -351,8 +249,8 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 	    size_t max_len = 0;
         for (auto& instance : instances) {
             instance.sentence.resize(instance.real_len);
-	    instance.padding = 0;
-	    instance.rand = dis(gen);
+            instance.padding = 0;
+            instance.rand = dis(gen);
         }
         // (1) perform a random shuffle that respects sentence len
         std::sort(instances.begin(), instances.end());
