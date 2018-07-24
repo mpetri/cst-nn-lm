@@ -61,10 +61,18 @@ target_link_libraries(create_cst_nn_lm
   divsufsort64
   )
 
-  add_executable(create_dynet_rnn_lm src/create_dynet_rnn_lm.cpp)
-  target_link_libraries(create_dynet_rnn_lm
-    ${Boost_LIBRARIES}
-    dynet
-    divsufsort
-    divsufsort64
-    )
+add_executable(create_cst_nn_lm src/create_cst_nn_lm2.cpp)
+target_link_libraries(create_cst_nn_lm2
+  ${Boost_LIBRARIES}
+  dynet
+  divsufsort
+  divsufsort64
+  )
+
+add_executable(create_dynet_rnn_lm src/create_dynet_rnn_lm.cpp)
+target_link_libraries(create_dynet_rnn_lm
+  ${Boost_LIBRARIES}
+  dynet
+  divsufsort
+  divsufsort64
+  )
