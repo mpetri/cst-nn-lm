@@ -187,12 +187,6 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
     size_t batch_size = std::distance(itr, end);
     size_t sentence_len = itr->sentence.size();
 
-    auto tmp = end;
-    while(tmp != itr) {
-        CNLOG << "compute_batch_losses sentence " << corpus.vocab.print_sentence(tmp->sentence);
-        ++tmp;
-    }
-
     static std::unordered_map<uint64_t,std::vector<float>> loss_cache;
     
     std::vector<std::vector<float>> losses(sentence_len);
@@ -253,10 +247,10 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
     }
     std::cout << "BATCH_CONTENT = " << std::endl;
     for(size_t j=0;j<batch_size;j++) {
-        for(size_t i=0;i<sentence_len;i++) {
+        for(size_t i=0;i<sentence_len-1;i++) {
             std::cout << corpus.vocab.inverse_lookup(toks[i][j]) << " ";
         }
-        std::cout << std::endl;
+        std::cout << "</s>" << std::endl;
     }
 
     return losses;
