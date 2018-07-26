@@ -111,7 +111,7 @@ struct vocab_t {
     {
         return tok2int.size();
     }
-    std::string print_sentence(std::vector<uint32_t>& sent) {
+    std::string print_sentence(std::vector<uint32_t>& sent) const {
         std::string s = "<";
         for(size_t i=0;i<sent.size();i++) {
             s += "[" + std::to_string(sent[i]) + ",'" + inverse_lookup(sent[i]) + "']";
@@ -195,7 +195,6 @@ struct data_loader {
             sentence.push_back(corpus.vocab.stop_sent_tok);
             auto shash = hash_sentence(sentence);
             if(sentence_filter.find(shash) == sentence_filter.end()) {
-                CNLOG << "add sentence " << corpus.vocab.print_sentence(sentence);
                 sentence_filter.insert(shash);
                 corpus.sent_starts.push_back(corpus.text.size());
                 for(auto& tok : sentence) {
