@@ -75,7 +75,9 @@ struct vocab_t {
             auto tok = tok_freqs[i].first;
             auto tok_str = int2tok[tok];
             auto new_tok_id = tok2int.size();
-            tok2int.insert({ tok_str, new_tok_id });
+            if(tok2int.find(tok_str) == tok2int.end()) {
+                tok2int.insert({ tok_str, new_tok_id });
+            }
             if (tok2int.size() == max_size)
                 break;
         }
@@ -151,29 +153,48 @@ struct data_loader {
         return v;
     }
 
+    uint64_t hash_sentence(std::vector<uint32_t>& sent) {
+        uint64_t hash = sent.size();
+        for(auto& tok : sent) {
+            hash ^= itok + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        }
+        return hash;
+    }
+
     static void parse_text(corpus_t& corpus)
     {
         CNLOG << "\tparse text " << corpus.file;
         auto train_file = corpus.file;
         std::ifstream input(train_file);
         input.imbue(std::locale("en_US.UTF-8"));
+
+        std::unordered_set<uint64_t> sentence_filter;
+
         for (std::string line; std::getline(input, line);) {
             auto toks = tokenize_line(line);
             if(toks.size() > constants::MAX_SENTENCE_LEN) continue;
-            corpus.sent_starts.push_back(corpus.text.size());
-            size_t slen = 1;
-            corpus.text.push_back(corpus.vocab.start_sent_tok);
+
+            std::vector<uint32_t> sentence;
+            sentence.push_back(corpus.vocab.start_sent_tok);
+            size_t num_oov = 0;
             for (const auto& tok : toks) {
-                corpus.text.push_back(corpus.vocab.lookup(tok));
-                if (corpus.text.back() == corpus.vocab.unk_tok) {
-                    corpus.num_oov++;
+                sentence.push_back(corpus.vocab.lookup(tok));
+                if (sentence.back() == corpus.vocab.unk_tok) {
+                    num_oov++;
                 }
-                slen++;
             }
-            corpus.text.push_back(corpus.vocab.stop_sent_tok);
-            slen++;
-            corpus.sent_lens.push_back(slen);
-            corpus.num_sentences++;
+            sentence.push_back(corpus.vocab.stop_sent_tok);
+            auto shash = hash_sentence(sentence);
+            if(sentence_filter.find(shash) == sentence_filter.end()) {
+                sentence_filter.insert(shash);
+                corpus.sent_starts.push_back(corpus.text.size());
+                for(auto& tok : sentence) {
+                    corpus.text.push_back(tok);
+                }
+                corpus.num_oov += num_oov;
+                corpus.num_sentences++;
+                corpus.sent_lens.push_back(sentence.size());
+            }
         }
         corpus.num_tokens = corpus.text.size();
     }
