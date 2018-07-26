@@ -12,5 +12,5 @@ size_t THRESHOLD = 10;
 }
 
 namespace constants {
-size_t MAX_SENTENCE_LEN = 128;
+size_t MAX_SENTENCE_LEN = 64;
 }
