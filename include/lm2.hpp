@@ -132,7 +132,7 @@ struct language_model2 {
             current_tok = next_tok;
         }
         // Add all errors
-        return std::make_tuple(sum_batches(sum(errs)), actual_predictions);
+        return std::make_tuple(dynet::sum(errs), actual_predictions);
     }
 
     template <class t_itr>
@@ -192,11 +192,15 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
     std::vector<std::vector<float>> losses(sentence_len);
     for(size_t i=0;i<losses.size();i++) losses[i].resize(corpus.vocab.size()*batch_size);
 
+    std::vector<std::vector<uint32_t>> toks(sentence_len);
+    for(size_t i=0;i<toks.size();i++) toks[i].resize(batch_size);
+
     for(size_t k=0;k<batch_size;k++) {
         auto instance = *itr;
         auto cur_node = cst.root();
         for(size_t i=0;i<instance.sentence.size()-1;i++) {
             auto& tok = instance.sentence[i];
+            toks[i][k] = tok;
             auto instance_loss_itr = losses[i].begin() + (corpus.vocab.size() * k);
             size_t char_pos;
             cur_node = cst.child(cur_node,tok,char_pos);
@@ -204,6 +208,7 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
                 // everything else is one hot
                 *(instance_loss_itr + instance.sentence[i+1]) = 1;
                 for(size_t j=i+1;j<instance.sentence.size()-1;j++) {
+                    toks[j][k] = instance.sentence[j];
                     instance_loss_itr = losses[j].begin() + (corpus.vocab.size() * k);
                     *(instance_loss_itr + instance.sentence[j+1]) = 1;
                 }
@@ -217,7 +222,7 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
                         auto& stored_loss = itr->second;
                         for(size_t i=0;i<stored_loss.size();i++) *(instance_loss_itr + i) = stored_loss[i];
                     } else {
-                        std::vector<float> stored_loss(corpus.vocab.size());
+                        std::vector<float> stored_loss(corpus.vocab.size(),0.0f);
                         auto node_depth = cst.depth(cur_node);
                         for (const auto& child : cst.children(cur_node)) {
                             auto tok = cst.edge(child, node_depth + 1);
@@ -240,6 +245,14 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
         }
         ++itr;
     }
+    std::cout << "BATCH_CONTENT = " << std::endl;
+    for(size_t j=0;j<batch_size;j++) {
+        for(size_t i=0;i<sentence_len;i++) {
+            std::cout << corpus.vocab.inverse_lookup([i][j]) << " ";
+        }
+        std::cout << std::endl;
+    }
+
     return losses;
 }
 
