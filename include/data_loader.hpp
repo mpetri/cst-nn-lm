@@ -122,6 +122,7 @@ struct corpus_t {
     size_t num_tokens = 0;
     size_t num_sentences = 0;
     size_t num_oov = 0;
+    size_t num_duplicates = 0;
 };
 
 struct data_loader {
@@ -195,6 +196,8 @@ struct data_loader {
                 corpus.num_oov += num_oov;
                 corpus.num_sentences++;
                 corpus.sent_lens.push_back(sentence.size());
+            } else {
+                corpus.num_duplicates++;
             }
         }
         corpus.num_tokens = corpus.text.size();
@@ -210,6 +213,7 @@ struct data_loader {
         parse_text(c);
         CNLOG << "\t\tnum tokens = " << c.num_tokens;
         CNLOG << "\t\tnum sentences = " << c.num_sentences;
+        CNLOG << "\t\tnum duplicate sentences = " << c.num_duplicates;
         CNLOG << "\t\tnum oov = " << c.num_oov << " ("
               << std::fixed << std::setprecision(1)
               << double(c.num_oov * 100) / double(c.num_tokens) << "%)";
@@ -228,6 +232,7 @@ struct data_loader {
         parse_text(c);
         CNLOG << "\t\tnum tokens = " << c.num_tokens;
         CNLOG << "\t\tnum sentences = " << c.num_sentences;
+        CNLOG << "\t\tnum duplicate sentences = " << c.num_duplicates;
         CNLOG << "\t\tnum oov = " << c.num_oov << " ("
               << std::fixed << std::setprecision(1)
               << double(c.num_oov * 100) / double(c.num_tokens) << "%)";
