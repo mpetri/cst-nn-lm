@@ -110,7 +110,7 @@ struct language_model2 {
         for (size_t i = 0; i < sentence_len - 1; ++i) {
             for (size_t j = 0; j < batch_size; j++) {
                 auto instance = start + j;
-                next_tok[j] = instance->sentence[i];
+                next_tok[j] = instance->sentence[i+1];
             }
 
             // Embed the current tokens
@@ -127,21 +127,21 @@ struct language_model2 {
             dynet::Expression i_error = dynet::transpose(i_true) * i_pred_linear;
             errs.push_back(i_error);
 
-            std::cout << i << " ";
-            for(size_t k=0;k<batch_size;k++) {
-                std::cout << corpus.vocab.inverse_lookup(current_tok[k]) << " ";
-            }
-            std::cout << std::endl;
-            for(size_t k=0;k<batch_size;k++) {
-                std::cout << "D [";
-                for(size_t r=0;r<corpus.vocab.size();r++) {
-                    auto prob = dists[i][corpus.vocab.size()*k+r];
-                    if(prob != 0) {
-                        std::cout << corpus.vocab.inverse_lookup(r) << "-" << prob << ",";
-                    }
-                    std::cout << "]" << std::endl;
-                }
-            }
+            // std::cout << i << " ";
+            // for(size_t k=0;k<batch_size;k++) {
+            //     std::cout << corpus.vocab.inverse_lookup(current_tok[k]) << " ";
+            // }
+            // std::cout << std::endl;
+            // for(size_t k=0;k<batch_size;k++) {
+            //     std::cout << "D [";
+            //     for(size_t r=0;r<corpus.vocab.size();r++) {
+            //         auto prob = dists[i][corpus.vocab.size()*k+r];
+            //         if(prob != 0) {
+            //             std::cout << corpus.vocab.inverse_lookup(r) << "-" << prob << ",";
+            //         }
+            //         std::cout << "]" << std::endl;
+            //     }
+            // }
 
             // Change input
             current_tok = next_tok;
@@ -207,18 +207,18 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
     std::vector<std::vector<float>> losses(sentence_len);
     for(size_t i=0;i<losses.size();i++) losses[i].resize(corpus.vocab.size()*batch_size);
 
-    std::vector<std::vector<uint32_t>> toks(sentence_len);
-    for(size_t i=0;i<toks.size();i++) toks[i].resize(batch_size);
+    // std::vector<std::vector<uint32_t>> toks(sentence_len);
+    // for(size_t i=0;i<toks.size();i++) toks[i].resize(batch_size);
 
-    std::vector<std::vector<std::pair<uint32_t,float>>> iloss(sentence_len);
-    for(size_t i=0;i<toks.size();i++) iloss[i].resize(batch_size);
+    // std::vector<std::vector<std::pair<uint32_t,float>>> iloss(sentence_len);
+    // for(size_t i=0;i<toks.size();i++) iloss[i].resize(batch_size);
 
     for(size_t k=0;k<batch_size;k++) {
         auto instance = *itr;
         auto cur_node = cst.root();
         for(size_t i=0;i<instance.sentence.size()-1;i++) {
             auto& tok = instance.sentence[i];
-            toks[i][k] = tok;
+            // toks[i][k] = tok;
             auto instance_loss_itr = losses[i].begin() + (corpus.vocab.size() * k);
             size_t char_pos;
             cur_node = cst.child(cur_node,tok,char_pos);
@@ -226,7 +226,7 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
                 // everything else is one hot
                 *(instance_loss_itr + instance.sentence[i+1]) = 1;
                 for(size_t j=i+1;j<instance.sentence.size()-1;j++) {
-                    toks[j][k] = instance.sentence[j];
+                    // toks[j][k] = instance.sentence[j];
                     instance_loss_itr = losses[j].begin() + (corpus.vocab.size() * k);
                     *(instance_loss_itr + instance.sentence[j+1]) = 1;
                 }
@@ -253,26 +253,26 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
                 } else {
                     auto node_depth = cst.depth(cur_node);
                     std::vector<uint32_t> prefix(instance.sentence.begin(),instance.sentence.begin()+i+1);
-                    std::cout << "FOLLOWING " << corpus.vocab.print_sentence(prefix);
+                    // std::cout << "FOLLOWING " << corpus.vocab.print_sentence(prefix);
                     double node_size = cst.size(cur_node);
                     for (const auto& child : cst.children(cur_node)) {
                         auto tok = cst.edge(child, node_depth + 1);
                         double size = cst.size(child);
                         *(instance_loss_itr + tok) = size / node_size;
-                        std::cout << "\t" << corpus.vocab.inverse_lookup(tok) << " - " << size / node_size << std::endl;
+                        // std::cout << "\t" << corpus.vocab.inverse_lookup(tok) << " - " << size / node_size << std::endl;
                     }
                 }
             }
         }
         ++itr;
     }
-    std::cout << "BATCH_CONTENT = " << std::endl;
-    for(size_t j=0;j<batch_size;j++) {
-        for(size_t i=0;i<sentence_len-1;i++) {
-            std::cout << corpus.vocab.inverse_lookup(toks[i][j]) << " ";
-        }
-        std::cout << "</s>" << std::endl;
-    }
+    // std::cout << "BATCH_CONTENT = " << std::endl;
+    // for(size_t j=0;j<batch_size;j++) {
+    //     for(size_t i=0;i<sentence_len-1;i++) {
+    //         std::cout << corpus.vocab.inverse_lookup(toks[i][j]) << " ";
+    //     }
+    //     std::cout << "</s>" << std::endl;
+    // }
 
     return losses;
 }
