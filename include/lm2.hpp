@@ -248,7 +248,7 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
     std::cout << "BATCH_CONTENT = " << std::endl;
     for(size_t j=0;j<batch_size;j++) {
         for(size_t i=0;i<sentence_len;i++) {
-            std::cout << corpus.vocab.inverse_lookup([i][j]) << " ";
+            std::cout << corpus.vocab.inverse_lookup(toks[i][j]) << " ";
         }
         std::cout << std::endl;
     }
