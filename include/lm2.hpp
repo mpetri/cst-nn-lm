@@ -79,7 +79,7 @@ struct language_model2 {
 
     template <class t_itr>
     std::tuple<dynet::Expression, size_t> build_train_graph_batch(dynet::ComputationGraph& cg, t_itr& start, t_itr& end,
-        std::vector<std::vector<float>>& dists,corputs_t& corpus)
+        std::vector<std::vector<float>>& dists,corpus_t& corpus)
     {
         size_t batch_size = std::distance(start, end);
         size_t sentence_len = start->sentence.size();
