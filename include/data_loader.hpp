@@ -4,6 +4,7 @@
 #include <iostream>
 #include <locale>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -156,7 +157,7 @@ struct data_loader {
     uint64_t hash_sentence(std::vector<uint32_t>& sent) {
         uint64_t hash = sent.size();
         for(auto& tok : sent) {
-            hash ^= itok + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+            hash ^= tok + 0x9e3779b9 + (hash << 6) + (hash >> 2);
         }
         return hash;
     }
