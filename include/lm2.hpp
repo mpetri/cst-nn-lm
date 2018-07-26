@@ -292,7 +292,7 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 	    size_t max_len = 0;
         for (auto& instance : instances) {
             instance.sentence.resize(instance.real_len);
-            CNLOG << "instance sentence " << corpus.vocab.print_sentence(sentence);
+            CNLOG << "instance sentence " << corpus.vocab.print_sentence(instance.sentence);
             instance.padding = 0;
             instance.rand = dis(gen);
         }
