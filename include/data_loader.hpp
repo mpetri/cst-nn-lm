@@ -154,7 +154,7 @@ struct data_loader {
         return v;
     }
 
-    uint64_t hash_sentence(std::vector<uint32_t>& sent) {
+    static uint64_t hash_sentence(std::vector<uint32_t>& sent) {
         uint64_t hash = sent.size();
         for(auto& tok : sent) {
             hash ^= tok + 0x9e3779b9 + (hash << 6) + (hash >> 2);
