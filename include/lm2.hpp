@@ -292,7 +292,7 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 	    size_t max_len = 0;
         for (auto& instance : instances) {
             instance.sentence.resize(instance.real_len);
-            CNLOG << "instance sentence " << corpus.vocab.print_sentence(instance.sentence);
+            // CNLOG << "instance sentence " << corpus.vocab.print_sentence(instance.sentence);
             instance.padding = 0;
             instance.rand = dis(gen);
         }
@@ -314,6 +314,7 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
                         batch_itr->sentence.push_back(padd_sym);
                         batch_itr->padding++;
                     }
+                    CNLOG << "padded sentence " << corpus.vocab.print_sentence(batch_itr->sentence);
                     ++batch_itr;
                 }
                 itr = batch_end + 1;
