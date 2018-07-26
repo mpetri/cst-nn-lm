@@ -187,6 +187,12 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
     size_t batch_size = std::distance(itr, end);
     size_t sentence_len = itr->sentence.size();
 
+    auto tmp = itr;
+    while(tmp != itr) {
+        CNLOG << "compute_batch_losses sentence " << corpus.vocab.print_sentence(tmp->sentence);
+        ++tmp;
+    }
+
     static std::unordered_map<uint64_t,std::vector<float>> loss_cache;
     
     std::vector<std::vector<float>> losses(sentence_len);
@@ -314,7 +320,6 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
                         batch_itr->sentence.push_back(padd_sym);
                         batch_itr->padding++;
                     }
-                    CNLOG << "padded sentence " << corpus.vocab.print_sentence(batch_itr->sentence);
                     ++batch_itr;
                 }
                 itr = batch_end + 1;
