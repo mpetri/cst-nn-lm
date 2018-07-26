@@ -187,7 +187,7 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
     size_t batch_size = std::distance(itr, end);
     size_t sentence_len = itr->sentence.size();
 
-    auto tmp = itr;
+    auto tmp = end;
     while(tmp != itr) {
         CNLOG << "compute_batch_losses sentence " << corpus.vocab.print_sentence(tmp->sentence);
         ++tmp;
