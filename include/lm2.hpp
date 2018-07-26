@@ -79,7 +79,7 @@ struct language_model2 {
 
     template <class t_itr>
     std::tuple<dynet::Expression, size_t> build_train_graph_batch(dynet::ComputationGraph& cg, t_itr& start, t_itr& end,
-        std::vector<std::vector<float>>& dists)
+        std::vector<std::vector<float>>& dists,corputs_t& corpus)
     {
         size_t batch_size = std::distance(start, end);
         size_t sentence_len = start->sentence.size();
@@ -107,7 +107,6 @@ struct language_model2 {
             actual_predictions += (instance->real_len - 1);
         }
 
-
         for (size_t i = 0; i < sentence_len - 1; ++i) {
             for (size_t j = 0; j < batch_size; j++) {
                 auto instance = start + j;
@@ -127,6 +126,22 @@ struct language_model2 {
             dynet::Expression i_true = dynet::input(cg, { (unsigned int)dists[i].size() }, dists[i]);
             dynet::Expression i_error = dynet::transpose(i_true) * i_pred_linear;
             errs.push_back(i_error);
+
+            std::cout << i << " ";
+            for(size_t k=0;k<batch_size;k++) {
+                std::cout << corpus.vocab.inverse_lookup(current_tok[k]) << " ";
+            }
+            std::cout << std::endl;
+            for(size_t k=0;k<batch_size;k++) {
+                std::cout << "D [";
+                for(size_t r=0;r<corpus.vocab.size();r++) {
+                    auto prob = dists[i][corpus.vocab.size()*k+r];
+                    if(prob != 0) {
+                        std::cout << corpus.vocab.inverse_lookup(r) << "-" << prob << ",";
+                    }
+                    std::cout << "]" << std::endl;
+                }
+            }
 
             // Change input
             current_tok = next_tok;
@@ -194,6 +209,9 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
 
     std::vector<std::vector<uint32_t>> toks(sentence_len);
     for(size_t i=0;i<toks.size();i++) toks[i].resize(batch_size);
+
+    std::vector<std::vector<std::pair<uint32_t,float>>> iloss(sentence_len);
+    for(size_t i=0;i<toks.size();i++) iloss[i].resize(batch_size);
 
     for(size_t k=0;k<batch_size;k++) {
         auto instance = *itr;
@@ -340,7 +358,7 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 
             dynet::ComputationGraph cg;
             auto train_start = std::chrono::high_resolution_clock::now();
-            auto loss_tuple = lm.build_train_graph_batch(cg, itr, batch_end,batch_losses);
+            auto loss_tuple = lm.build_train_graph_batch(cg, itr, batch_end,batch_losses,corpus);
             auto loss_expr = std::get<0>(loss_tuple);
             auto num_predictions = std::get<1>(loss_tuple);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
