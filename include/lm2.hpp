@@ -234,11 +234,14 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
                     }
                 } else {
                     auto node_depth = cst.depth(cur_node);
+                    std::vector<uint32_t> prefix(instance.sentence.begin(),instance.sentence.begin()+i+1);
+                    std::cout << "FOLLOWING " << corpus.vocab.print_sentence(prefix);
                     double node_size = cst.size(cur_node);
                     for (const auto& child : cst.children(cur_node)) {
                         auto tok = cst.edge(child, node_depth + 1);
                         double size = cst.size(child);
                         *(instance_loss_itr + tok) = size / node_size;
+                        std::cout << "\t" << corpus.vocab.inverse_lookup(tok) << " - " << size / node_size << std::endl;
                     }
                 }
             }
