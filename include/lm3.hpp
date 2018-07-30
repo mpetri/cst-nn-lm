@@ -63,13 +63,13 @@ void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& in
     new_instance.prefix = parent.prefix;
     new_instance.prefix.push_back(tok);
     if(cst.is_leaf(cst_node)) {
-        CNLOG << "add leaf instance from parent " << print_vec(parent.prefix,corpus.vocab);
+        // CNLOG << "add leaf instance from parent " << print_vec(parent.prefix,corpus.vocab);
         // new node is leaf node, create special node
         new_instance.one_hot = true;
         new_instance.num_children = 1;
         new_instance.num_occ = 1;
 
-        CNLOG << "new prefix " << print_vec(new_instance.prefix,corpus.vocab);
+        // CNLOG << "new prefix " << print_vec(new_instance.prefix,corpus.vocab);
 
         auto cur_depth = new_instance.prefix.size();
         auto next_tok = cst.edge(cst_node, cur_depth + 2);
@@ -79,29 +79,29 @@ void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& in
             next_tok = cst.edge(cst_node, cur_depth + 2);
         }
         new_instance.suffix.push_back(next_tok);
-        CNLOG << "new suffix " << print_vec(new_instance.suffix,corpus.vocab);
+        // CNLOG << "new suffix " << print_vec(new_instance.suffix,corpus.vocab);
     } else {
         // new node is NOT a leafe node
-        CNLOG << "add NON leaf instance from parent " << print_vec(parent.prefix,corpus.vocab);
-        CNLOG << "new prefix " << print_vec(new_instance.prefix,corpus.vocab);
+        // CNLOG << "add NON leaf instance from parent " << print_vec(parent.prefix,corpus.vocab);
+        // CNLOG << "new prefix " << print_vec(new_instance.prefix,corpus.vocab);
         new_instance.one_hot = false;
         new_instance.processed = false;
         new_instance.num_children = cst.degree(cst_node);
         new_instance.num_occ = cst.size(cst_node);
-        CNLOG << "new_instance.num_children " << new_instance.num_children;
-        CNLOG << "new_instance.num_occ " << new_instance.num_occ;
+        // CNLOG << "new_instance.num_children " << new_instance.num_children;
+        // CNLOG << "new_instance.num_occ " << new_instance.num_occ;
     }
     instances.push_back(new_instance);
 }
 
 std::vector<float> create_true_dist(const corpus_t& corpus,const cst_type& cst,instances_t& instances,train_instance_t instance)
 {
-    CNLOG << "create_true_dist for instance " << print_vec(instance.prefix,corpus.vocab)
-            << " num_children " << instance.num_children
-            << " num_occ " << instance.num_occ;
+    // CNLOG << "create_true_dist for instance " << print_vec(instance.prefix,corpus.vocab)
+    //         << " num_children " << instance.num_children
+    //         << " num_occ " << instance.num_occ;
     std::vector<float> dist(corpus.vocab.size(),0);
     if(instance.dist.size() != 0) { // prestored?
-        CNLOG << "PRESTORED!!";
+        // CNLOG << "PRESTORED!!";
         return instance.dist;
     }
     auto node_depth = instance.prefix.size();
@@ -115,7 +115,7 @@ std::vector<float> create_true_dist(const corpus_t& corpus,const cst_type& cst,i
     }
     instance.processed = true;
     if(instance.num_children >= 25) { // should we store this?
-        CNLOG << "WE NEED TO STORE!!";
+        //CNLOG << "WE NEED TO STORE!!";
         instance.dist = dist;
     }
     return dist;
@@ -164,6 +164,7 @@ struct language_model3 {
         std::cout << "batch_size = " << batch_size << std::endl;
         std::vector<dynet::Expression> errors;
         for(size_t i=0;i<batch_size;i++) {
+            CNLOG << i << "/" << batch_size;
             auto instance = instances[cur_pos+i];
 
             // Initialize the RNN for a new computation graph
@@ -186,6 +187,7 @@ struct language_model3 {
             auto i_y_t = rnn.add_input(i_x_t);
 
             if(instance.one_hot) {
+                CNLOG << "ONE HOT. FINISH SENTENCE";
                 size_t suffix_len = instance.suffix.size();
                 for (size_t i = 0; i < suffix_len - 1; ++i) {
                     auto cur_tok = instance.suffix[i];
@@ -204,6 +206,7 @@ struct language_model3 {
                 auto i_err = dynet::pickneglogsoftmax(i_r_t, last_tok);
                 errors.push_back(i_err);
             } else {
+                CNLOG << "DIST. CREATE TRUE DIST";
                 auto dist = create_true_dist(corpus,cst,instances,instance);
                 unsigned int dist_len = dist.size();
                 dynet::Expression i_r_t = i_bias + i_R * i_y_t;
@@ -214,6 +217,7 @@ struct language_model3 {
                 errors.push_back(i_error);
             }
         }
+        CNLOG << "DONE CREATE BATCH";
         cur_pos += batch_size;
         return dynet::sum(errors);
     }
