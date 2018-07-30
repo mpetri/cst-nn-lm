@@ -13,4 +13,5 @@ size_t THRESHOLD = 10;
 
 namespace constants {
 size_t MAX_SENTENCE_LEN = 64;
+size_t RAND_SEED = 12345;
 }
