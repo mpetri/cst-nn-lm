@@ -263,6 +263,7 @@ language_model3 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 
     instances_t instances;
     size_t cur = 0;
+    size_t last_report = 0;
     create_start_instance(cst,corpus,instances);
     dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
@@ -271,6 +272,8 @@ language_model3 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
         while(cur != instances.size()) {
             auto done_before = cur;
             dynet::ComputationGraph cg;
+
+            auto train_start = std::chrono::high_resolution_clock::now();
             auto loss_expr = lm.build_train_graph(cg,instances,cur,batch_size,corpus,cst);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
             auto done_after = cur;
@@ -278,6 +281,19 @@ language_model3 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
             auto instance_loss = loss_float / actual_batch_size;
             cg.backward(loss_expr);
             trainer.update();
+            auto train_end = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> train_diff = train_end - train_start;
+            auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
+
+            if ( (cur - last_report) > 32768 || cur == instances.size()) {
+                double percent = double(cur) / double(instances.size()) * 100;
+                last_report = cur;
+                CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
+                      << cur << "/" << instances.size()
+                      << " batch_size = " << actual_batch_size
+                      << " FW/BW/UPDATE  "
+                      << time_per_instance << "ms/instance - loss = " << instance_loss;
+            }
         }
 
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
