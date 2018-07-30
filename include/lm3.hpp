@@ -75,8 +75,6 @@ void add_new_instance(corpus_t& corpus,const cst_type& cst,instances_t& instance
     instances.push_back(new_instance);
 }
 
-template <class t_dist_itr>
-void create_dist(instances_t& pq,const cst_type& cst,train_instance_t& instance, size_t vocab_size)
 std::vector<float> create_true_dist(const corpus_t& corpus,const cst_type& cst,instances_t& instances,train_instance_t& instance)
 {
     std::vector<float> dist(vocab_size,0);
@@ -171,7 +169,7 @@ struct language_model3 {
                     auto i_r_t = i_bias + i_R * i_y_t;
                     // Compute error for each member of the batch
                     auto i_err = dynet::pickneglogsoftmax(i_r_t, cur_tok);
-                    errs.push_back(i_err);
+                    errors.push_back(i_err);
                     // Embed the current tokens
                     i_x_t = dynet::lookup(cg, p_c, cur_tok);
                     // Run one step of the rnn : y_t = RNN(x_t)
@@ -180,7 +178,7 @@ struct language_model3 {
                 auto i_r_t = i_bias + i_R * i_y_t;
                 auto last_tok = instance.suffix.back();
                 auto i_err = dynet::pickneglogsoftmax(i_r_t, last_tok);
-                errs.push_back(i_err);
+                errors.push_back(i_err);
             } else {
                 auto dist = create_true_dist(corpus,cst,instances,instance);
                 unsigned int dist_len = dist.size();
@@ -255,7 +253,7 @@ void create_start_instance(const cst_type& cst,const corpus_t& corpus,pq_t& pq)
     pq.push_back(start_instance);
 }
 
-language_model create_lm(const cst_type& cst, const corpus_t& corpus, args_t& args)
+language_model3 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& args)
 {
     auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
     std::mt19937 rng(constants::RAND_SEED);
@@ -264,7 +262,7 @@ language_model create_lm(const cst_type& cst, const corpus_t& corpus, args_t& ar
     auto batch_size = args["batch_size"].as<size_t>();
     auto threads = args["threads"].as<size_t>();
     auto threshold = args["threshold"].as<size_t>();
-    language_model lm(vocab, args);
+    language_model3 lm(vocab, args);
 
     instances_t instances;
     size_t cur = 0;
