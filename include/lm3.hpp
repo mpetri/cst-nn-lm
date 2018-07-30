@@ -96,8 +96,12 @@ void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& in
 
 std::vector<float> create_true_dist(const corpus_t& corpus,const cst_type& cst,instances_t& instances,train_instance_t& instance)
 {
+    CNLOG << "create_true_dist for instance " << print_vec(instance.prefix,corpus,vocab)
+            << " num_children " << instance.num_children;
+            << " num_occ " << instance.num_occ;
     std::vector<float> dist(corpus.vocab.size(),0);
     if(instance.dist.size() != 0) { // prestored?
+        CNLOG << "PRESTORED!!";
         return instance.dist;
     }
     auto node_depth = instance.prefix.size();
@@ -111,6 +115,7 @@ std::vector<float> create_true_dist(const corpus_t& corpus,const cst_type& cst,i
     }
     instance.processed = true;
     if(instance.num_children >= 25) { // should we store this?
+        CNLOG << "WE NEED TO STORE!!";
         instance.dist = dist;
     }
     return dist;
@@ -266,6 +271,8 @@ void create_start_instance(const cst_type& cst,const corpus_t& corpus,instances_
     auto rb = cst.csa.C[corpus.vocab.start_sent_tok + 1] - 1;
     auto start_node = cst.node(lb,rb); // cst node of <s>
     train_instance_t start_instance;
+    start_instance.one_hot = false;
+    start_instance.processed = false;
     start_instance.num_children = cst.degree(start_node);
     start_instance.num_occ = rb-lb+1;
     start_instance.prefix.push_back(corpus.vocab.start_sent_tok);
