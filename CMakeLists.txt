@@ -75,8 +75,8 @@ target_link_libraries(create_cst_nn_lm2
   divsufsort64
   )
 
-add_executable(create_cst_nn_lm2 src/create_cst_nn_lm2.cpp)
-target_link_libraries(create_cst_nn_lm2
+add_executable(create_cst_nn_lm3 src/create_cst_nn_lm3.cpp)
+target_link_libraries(create_cst_nn_lm3
   ${Boost_LIBRARIES}
   dynet
   divsufsort
