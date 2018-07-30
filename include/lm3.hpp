@@ -153,7 +153,7 @@ struct language_model3 {
         const corpus_t& corpus,const cst_type& cst)
     {
         auto batch_size = max_batch_size;
-        if(cur_pos + max_batch_size < instances.size()) {
+        if(cur_pos + max_batch_size >= instances.size()) {
             batch_size = instances.size() - cur_pos;
         }
         std::cout << "batch_size = " << batch_size << std::endl;
