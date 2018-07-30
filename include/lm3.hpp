@@ -263,7 +263,7 @@ language_model3 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 
     instances_t instances;
     size_t cur = 0;
-    create_start_instance(corpus,instances,cst);
+    create_start_instance(cst,corpus,instances);
     dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
