@@ -106,7 +106,7 @@ std::vector<float> create_true_dist(const corpus_t& corpus,const cst_type& cst,i
     }
     auto node_depth = instance.prefix.size();
     for (const auto& child : cst.children(instance.cst_node)) {
-        auto tok = cst.edge(child, node_depth + 2);
+        auto tok = cst.edge(child, node_depth + 1);
         double size = cst.size(child);
         dist[tok] = size;
         if(!instance.processed) {
