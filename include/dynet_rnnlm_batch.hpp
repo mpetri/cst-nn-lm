@@ -141,7 +141,7 @@ struct RNNBatchLanguageModel {
         for (size_t i = 0; i < sentence_len - 1; ++i) {
             for (size_t j = 0; j < batch_size; j++) {
                 auto instance = start + j;
-                next_tok[j] = instance->sentence[i];
+                next_tok[j] = instance->sentence[i+1];
             }
 
             // Embed the current tokens

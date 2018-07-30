@@ -224,10 +224,6 @@ struct data_loader {
         CNLOG << "\t\tnum oov = " << c.num_oov << " ("
               << std::fixed << std::setprecision(1)
               << double(c.num_oov * 100) / double(c.num_tokens) << "%)";
-        for (size_t i = 0; i < 100; i++) {
-            auto str_tok = c.vocab.inverse_lookup(i);
-            CNLOG << "\t\t" << i << " = " << str_tok;
-        }
         return c;
     }
 
