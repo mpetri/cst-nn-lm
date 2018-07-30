@@ -83,8 +83,8 @@ target_link_libraries(create_cst_nn_lm3
   divsufsort64
   )
 
-add_executable(dynet_rnnlm_batch src/dynet_rnnlm_batch.cpp)
-target_link_libraries(dynet_rnnlm_batch
+add_executable(create_dynet_rnn_lm src/create_dynet_rnn_lm.cpp)
+target_link_libraries(create_dynet_rnn_lm
   ${Boost_LIBRARIES}
   dynet
   divsufsort
