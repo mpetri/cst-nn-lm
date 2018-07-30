@@ -55,7 +55,7 @@ print_vec(std::vector<uint32_t>& vec, const vocab_t& vocab)
 }
 
 void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& instances,
-                                     train_instance_t& parent,uint32_t tok,cst_node_type cst_node)
+                                     train_instance_t parent,uint32_t tok,cst_node_type cst_node)
 {
     if(tok == corpus.vocab.stop_sent_tok) return;
     train_instance_t new_instance;
@@ -94,7 +94,7 @@ void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& in
     instances.push_back(new_instance);
 }
 
-std::vector<float> create_true_dist(const corpus_t& corpus,const cst_type& cst,instances_t& instances,train_instance_t& instance)
+std::vector<float> create_true_dist(const corpus_t& corpus,const cst_type& cst,instances_t& instances,train_instance_t instance)
 {
     CNLOG << "create_true_dist for instance " << print_vec(instance.prefix,corpus.vocab)
             << " num_children " << instance.num_children
@@ -164,7 +164,7 @@ struct language_model3 {
         std::cout << "batch_size = " << batch_size << std::endl;
         std::vector<dynet::Expression> errors;
         for(size_t i=0;i<batch_size;i++) {
-            auto& instance = instances[cur_pos+i];
+            auto instance = instances[cur_pos+i];
 
             // Initialize the RNN for a new computation graph
             rnn.new_graph(cg);
