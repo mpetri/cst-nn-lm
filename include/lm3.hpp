@@ -260,8 +260,6 @@ language_model3 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
-    auto threads = args["threads"].as<size_t>();
-    auto threshold = args["threshold"].as<size_t>();
     language_model3 lm(vocab, args);
 
     instances_t instances;
