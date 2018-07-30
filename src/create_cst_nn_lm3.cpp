@@ -61,7 +61,7 @@ int main(int argc, char** argv)
 
     CNLOG << "test language model";
     auto test_corpus_file = args["path"].as<std::string>() + "/" + constants::TEST_FILE;
-    auto pplx = evaluate_pplx(lm, corpus.vocab, test_corpus_file);
+    auto pplx = evaluate_pplx(lm, corpus, test_corpus_file);
     CNLOG << "test pplx = " << pplx;
 
     return 0;
