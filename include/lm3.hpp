@@ -96,7 +96,7 @@ void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& in
 
 std::vector<float> create_true_dist(const corpus_t& corpus,const cst_type& cst,instances_t& instances,train_instance_t& instance)
 {
-    CNLOG << "create_true_dist for instance " << print_vec(instance.prefix,corpus,vocab)
+    CNLOG << "create_true_dist for instance " << print_vec(instance.prefix,corpus.vocab)
             << " num_children " << instance.num_children
             << " num_occ " << instance.num_occ;
     std::vector<float> dist(corpus.vocab.size(),0);
