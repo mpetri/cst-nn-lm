@@ -62,7 +62,7 @@ void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& in
         while(next_tok != corpus.vocab.stop_sent_tok) {
             new_instance.suffix.push_back(next_tok);
             cur_depth++;
-            auto next_tok = cst.edge(cst_node, cur_depth + 1);
+            next_tok = cst.edge(cst_node, cur_depth + 1);
         }
         new_instance.suffix.push_back(next_tok);
     } else {
@@ -283,7 +283,7 @@ language_model3 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
 
-        auto pplx = evaluate_pplx(lm, corpus.vocab, dev_corpus_file);
+        auto pplx = evaluate_pplx(lm, corpus, dev_corpus_file);
         CNLOG << "epoch dev pplx = " << pplx;
 
         // restart with new ordering for next epoch
