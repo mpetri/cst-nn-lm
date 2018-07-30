@@ -77,13 +77,13 @@ void add_new_instance(corpus_t& corpus,const cst_type& cst,instances_t& instance
 
 std::vector<float> create_true_dist(const corpus_t& corpus,const cst_type& cst,instances_t& instances,train_instance_t& instance)
 {
-    std::vector<float> dist(vocab_size,0);
+    std::vector<float> dist(corpus.vocab.size(),0);
     if(instance.dist.size() != 0) { // prestored?
         return instance.dist;
     }
-    auto node_depth = cst.depth(cst_node);
+    auto node_depth = instance.prefix.size();
     for (const auto& child : cst.children(instance.cst_node)) {
-        auto tok = cst.edge(child, node_depth + 1);
+        auto tok = cst.edge(child, node_depth + 2);
         double size = cst.size(child);
         dist[tok] = size;
         if(!instance.processed) {
@@ -111,7 +111,7 @@ struct language_model3 {
     dynet::Expression i_bias;
     dynet::LSTMBuilder rnn;
 
-    language_model(const vocab_t& vocab, args_t& args)
+    language_model3(const vocab_t& vocab, args_t& args)
     {
         LAYERS = args["layers"].as<uint32_t>();
         INPUT_DIM = args["input_dim"].as<uint32_t>();
