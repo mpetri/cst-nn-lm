@@ -130,7 +130,6 @@ struct language_model3 {
         rnn = dynet::LSTMBuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model);
     }
 
-    template <class t_itr>
     dynet::Expression build_train_graph(dynet::ComputationGraph& cg,instances_t& instances,size_t& cur_pos,size_t max_batch_size,
         const corpus_t& corpus,const cst_type& cst)
     {
