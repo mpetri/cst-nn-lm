@@ -244,7 +244,7 @@ evaluate_pplx(language_model3& lm, const vocab_t& vocab, std::string file)
 void create_start_instance(const cst_type& cst,const corpus_t& corpus,instances_t& instances)
 {
     auto lb = cst.csa.C[corpus.vocab.start_sent_tok];
-    auto rb = corpus.vocab.start_sent_tok + 1] - 1;
+    auto rb = cst.csa.C[corpus.vocab.start_sent_tok + 1] - 1;
     auto start_node = cst.node(lb,rb); // cst node of <s>
     train_instance_t start_instance;
     start_instance.num_children = cst.degree(start_node);
@@ -264,7 +264,7 @@ language_model3 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 
     instances_t instances;
     size_t cur = 0;
-    create_start_instance(corpus,pq,cst);
+    create_start_instance(corpus,instances,cst);
     dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;

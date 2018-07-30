@@ -57,7 +57,7 @@ int main(int argc, char** argv)
 
     CNLOG << "create language model";
     dynet::initialize(argc, argv);
-    auto lm = create_lm(cst, corpus.vocab, args);
+    auto lm = create_lm(cst, corpus, args);
 
     CNLOG << "test language model";
     auto test_corpus_file = args["path"].as<std::string>() + "/" + constants::TEST_FILE;
