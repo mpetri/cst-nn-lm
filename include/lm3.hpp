@@ -226,11 +226,11 @@ evaluate_pplx(language_model3& lm, const corpus_t& corpus, std::string file)
     double loss = 0.0;
     double predictions = 0;
 
-    auto corpus = data_loader::parse_file(corpus.vocab, file);
+    auto test_corpus = data_loader::parse_file(corpus.vocab, file);
     boost::progress_display show_progress(corpus.num_sentences);
-    for (size_t i = 0; i < corpus.num_sentences; i++) {
-        auto start_sent = corpus.text.begin() + corpus.sent_starts[i];
-        auto sent_len = corpus.sent_lens[i];
+    for (size_t i = 0; i < test_corpus.num_sentences; i++) {
+        auto start_sent = test_corpus.text.begin() + test_corpus.sent_starts[i];
+        auto sent_len = test_corpus.sent_lens[i];
 
         dynet::ComputationGraph cg;
         auto loss_expr = lm.build_valid_graph(cg, start_sent, sent_len);
