@@ -221,7 +221,7 @@ struct language_model3 {
 };
 
 double
-evaluate_pplx(language_model3& lm, const corpus& corpus, std::string file)
+evaluate_pplx(language_model3& lm, const corpus_t& corpus, std::string file)
 {
     double loss = 0.0;
     double predictions = 0;
