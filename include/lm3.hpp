@@ -271,6 +271,7 @@ void create_start_instance(const cst_type& cst,const corpus_t& corpus,instances_
     auto rb = cst.csa.C[corpus.vocab.start_sent_tok + 1] - 1;
     auto start_node = cst.node(lb,rb); // cst node of <s>
     train_instance_t start_instance;
+    start_instance.cst_node = start_node;
     start_instance.one_hot = false;
     start_instance.processed = false;
     start_instance.num_children = cst.degree(start_node);
