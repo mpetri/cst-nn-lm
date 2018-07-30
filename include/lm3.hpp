@@ -43,7 +43,7 @@ struct train_instance_t {
 
 using instances_t = std::vector<train_instance_t>;
 
-void add_new_instance(corpus_t& corpus,const cst_type& cst,instances_t& instances,
+void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& instances,
                                      train_instance_t& parent,uint32_t tok,cst_node_type cst_node)
 {
     if(tok == corpus.vocab.stop_sent_tok) return;
@@ -221,7 +221,7 @@ struct language_model3 {
 };
 
 double
-evaluate_pplx(language_model& lm, const vocab_t& vocab, std::string file)
+evaluate_pplx(language_model3& lm, const vocab_t& vocab, std::string file)
 {
     double loss = 0.0;
     double predictions = 0;
@@ -260,7 +260,7 @@ language_model3 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
-    language_model3 lm(vocab, args);
+    language_model3 lm(corpus.vocab, args);
 
     instances_t instances;
     size_t cur = 0;
@@ -283,7 +283,7 @@ language_model3 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
 
-        auto pplx = evaluate_pplx(lm, vocab, dev_corpus_file);
+        auto pplx = evaluate_pplx(lm, corpus.vocab, dev_corpus_file);
         CNLOG << "epoch dev pplx = " << pplx;
 
         // restart with new ordering for next epoch
