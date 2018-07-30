@@ -62,7 +62,7 @@ void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& in
         while(next_tok != corpus.vocab.stop_sent_tok) {
             new_instance.suffix.push_back(next_tok);
             cur_depth++;
-            auto next_tok = cst.edge(child, cur_depth + 1);
+            auto next_tok = cst.edge(cst_node, cur_depth + 1);
         }
         new_instance.suffix.push_back(next_tok);
     } else {
@@ -221,12 +221,12 @@ struct language_model3 {
 };
 
 double
-evaluate_pplx(language_model3& lm, const vocab_t& vocab, std::string file)
+evaluate_pplx(language_model3& lm, const corpus& corpus, std::string file)
 {
     double loss = 0.0;
     double predictions = 0;
 
-    auto corpus = data_loader::parse_file(vocab, file);
+    auto corpus = data_loader::parse_file(corpus.vocab, file);
     boost::progress_display show_progress(corpus.num_sentences);
     for (size_t i = 0; i < corpus.num_sentences; i++) {
         auto start_sent = corpus.text.begin() + corpus.sent_starts[i];
