@@ -43,6 +43,16 @@ struct train_instance_t {
 
 using instances_t = std::vector<train_instance_t>;
 
+std::string
+print_vec(std::vector<uint32_t>& vec, const vocab_t& vocab)
+{
+    std::string s = "[";
+    for (size_t i = 0; i < vec.size() - 1; i++) {
+        s += vocab.inverse_lookup(vec[i]) + " ";
+    }
+    return s + vocab.inverse_lookup(vec.back()) + "]";
+}
+
 void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& instances,
                                      train_instance_t& parent,uint32_t tok,cst_node_type cst_node)
 {
@@ -52,10 +62,13 @@ void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& in
     new_instance.prefix = parent.prefix;
     new_instance.prefix.push_back(tok);
     if(cst.is_leaf(cst_node)) {
+        CNLOG << "add leaf instance from parent " << print_vec(new_instance.parent,corpus.vocab);
         // new node is leaf node, create special node
         new_instance.one_hot = true;
         new_instance.num_children = 1;
         new_instance.num_occ = 1;
+
+        CNLOG << "new prefix " << print_vec(new_instance.prefix,corpus.vocab);
 
         auto cur_depth = new_instance.prefix.size();
         auto next_tok = cst.edge(cst_node, cur_depth + 1);
@@ -65,12 +78,17 @@ void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& in
             next_tok = cst.edge(cst_node, cur_depth + 1);
         }
         new_instance.suffix.push_back(next_tok);
+        CNLOG << "new suffix " << print_vec(new_instance.suffix,corpus.vocab);
     } else {
         // new node is NOT a leafe node
+        CNLOG << "add NON leaf instance from parent " << print_vec(new_instance.parent,corpus.vocab);
+        CNLOG << "new prefix " << print_vec(new_instance.prefix,corpus.vocab);
         new_instance.one_hot = false;
         new_instance.processed = false;
         new_instance.num_children = cst.degree(cst_node);
         new_instance.num_occ = cst.size(cst_node);
+        CNLOG << "new_instance.num_children " << new_instance.num_children;
+        CNLOG << "new_instance.num_occ " << new_instance.num_occ;
     }
     instances.push_back(new_instance);
 }
@@ -137,6 +155,7 @@ struct language_model3 {
         if(cur_pos + max_batch_size < instances.size()) {
             batch_size = instances.size() - cur_pos;
         }
+        std::cout << "batch_size = " << batch_size << std::endl;
         std::vector<dynet::Expression> errors;
         for(size_t i=0;i<batch_size;i++) {
             auto& instance = instances[cur_pos+i];
@@ -285,7 +304,7 @@ language_model3 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
             std::chrono::duration<double> train_diff = train_end - train_start;
             auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
-            if ( (cur - last_report) > 32768 || cur == instances.size()) {
+            if ( (cur - last_report) > 1 || cur == instances.size()) {
                 double percent = double(cur) / double(instances.size()) * 100;
                 last_report = cur;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
