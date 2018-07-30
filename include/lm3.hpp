@@ -154,7 +154,7 @@ struct language_model3 {
         rnn = dynet::LSTMBuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model);
     }
 
-    dynet::Expression build_train_graph(dynet::ComputationGraph& cg,instances_t& instances,size_t& cur_pos,size_t max_batch_size,
+    std::tuple<dynet::Expression,size_t> build_train_graph(dynet::ComputationGraph& cg,instances_t& instances,size_t& cur_pos,size_t max_batch_size,
         const corpus_t& corpus,const cst_type& cst)
     {
         auto batch_size = max_batch_size;
@@ -219,7 +219,7 @@ struct language_model3 {
         }
         // CNLOG << "DONE CREATE BATCH";
         cur_pos += batch_size;
-        return dynet::sum(errors);
+        return std::make_tuple(dynet::sum(errors),errors.size());
     }
 
     template <class t_itr>
@@ -306,18 +306,21 @@ language_model3 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
             dynet::ComputationGraph cg;
 
             auto train_start = std::chrono::high_resolution_clock::now();
-            auto loss_expr = lm.build_train_graph(cg,instances,cur,batch_size,corpus,cst);
+            double num_pred = 0;
+            auto loss = lm.build_train_graph(cg,instances,cur,batch_size,corpus,cst,num_pred);
+            auto loss_expr = std::get<0>(loss);
+            double num_pred = std::get<1>(loss);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
             auto done_after = cur;
             auto actual_batch_size = done_after - done_before;
-            auto instance_loss = loss_float / actual_batch_size;
+            auto instance_loss = loss_float / num_pred;
             cg.backward(loss_expr);
             trainer.update();
             auto train_end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> train_diff = train_end - train_start;
             auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
-            if ( (cur - last_report) > 1 || cur == instances.size()) {
+            if ( (cur - last_report) > 32 || cur == instances.size()) {
                 double percent = double(cur) / double(instances.size()) * 100;
                 last_report = cur;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "

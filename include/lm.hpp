@@ -112,7 +112,6 @@ struct language_model {
     template <class t_itr>
     dynet::Expression build_valid_graph(dynet::ComputationGraph& cg, t_itr itr, size_t len)
     {
-
         // Initialize the RNN for a new computation graph
         rnn.new_graph(cg);
         // Prepare for new sequence (essentially set hidden states to 0)
@@ -121,7 +120,6 @@ struct language_model {
         // output -> word rep parameters (matrix + bias)
         i_R = dynet::parameter(cg, p_R);
         i_bias = dynet::parameter(cg, p_bias);
-
         std::vector<dynet::Expression> errors(len - 1);
         for (size_t i = 0; i < len - 1; i++) {
             auto cur_sym = *itr++;
@@ -187,7 +185,7 @@ void create_dist(const cst_type& cst, const train_instance_t& instance, t_dist_i
     for (const auto& child : cst.children(instance.cst_node)) {
         auto tok = cst.edge(child, node_depth + 1);
         double size = cst.size(child);
-        *(dist_itr + tok) = size / node_size;
+        *(dist_itr + tok) = size;
     }
 }
 
