@@ -46,6 +46,7 @@ using instances_t = std::vector<train_instance_t>;
 std::string
 print_vec(std::vector<uint32_t>& vec, const vocab_t& vocab)
 {
+    if(vec.size() == 0) return "[]";
     std::string s = "[";
     for (size_t i = 0; i < vec.size() - 1; i++) {
         s += vocab.inverse_lookup(vec[i]) + " ";
@@ -62,7 +63,7 @@ void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& in
     new_instance.prefix = parent.prefix;
     new_instance.prefix.push_back(tok);
     if(cst.is_leaf(cst_node)) {
-        CNLOG << "add leaf instance from parent " << print_vec(new_instance.parent,corpus.vocab);
+        CNLOG << "add leaf instance from parent " << print_vec(parent.prefix,corpus.vocab);
         // new node is leaf node, create special node
         new_instance.one_hot = true;
         new_instance.num_children = 1;
@@ -81,7 +82,7 @@ void add_new_instance(const corpus_t& corpus,const cst_type& cst,instances_t& in
         CNLOG << "new suffix " << print_vec(new_instance.suffix,corpus.vocab);
     } else {
         // new node is NOT a leafe node
-        CNLOG << "add NON leaf instance from parent " << print_vec(new_instance.parent,corpus.vocab);
+        CNLOG << "add NON leaf instance from parent " << print_vec(parent.prefix,corpus.vocab);
         CNLOG << "new prefix " << print_vec(new_instance.prefix,corpus.vocab);
         new_instance.one_hot = false;
         new_instance.processed = false;
