@@ -161,10 +161,10 @@ struct language_model3 {
         if(cur_pos + max_batch_size >= instances.size()) {
             batch_size = instances.size() - cur_pos;
         }
-        std::cout << "batch_size = " << batch_size << std::endl;
+        // std::cout << "batch_size = " << batch_size << std::endl;
         std::vector<dynet::Expression> errors;
         for(size_t i=0;i<batch_size;i++) {
-            CNLOG << i << "/" << batch_size;
+            // CNLOG << i << "/" << batch_size;
             auto instance = instances[cur_pos+i];
 
             // Initialize the RNN for a new computation graph
@@ -187,7 +187,7 @@ struct language_model3 {
             auto i_y_t = rnn.add_input(i_x_t);
 
             if(instance.one_hot) {
-                CNLOG << "ONE HOT. FINISH SENTENCE";
+                // CNLOG << "ONE HOT. FINISH SENTENCE";
                 size_t suffix_len = instance.suffix.size();
                 for (size_t i = 0; i < suffix_len - 1; ++i) {
                     auto cur_tok = instance.suffix[i];
@@ -206,7 +206,7 @@ struct language_model3 {
                 auto i_err = dynet::pickneglogsoftmax(i_r_t, last_tok);
                 errors.push_back(i_err);
             } else {
-                CNLOG << "DIST. CREATE TRUE DIST";
+                // CNLOG << "DIST. CREATE TRUE DIST";
                 auto dist = create_true_dist(corpus,cst,instances,instance);
                 unsigned int dist_len = dist.size();
                 dynet::Expression i_r_t = i_bias + i_R * i_y_t;
@@ -217,7 +217,7 @@ struct language_model3 {
                 errors.push_back(i_error);
             }
         }
-        CNLOG << "DONE CREATE BATCH";
+        // CNLOG << "DONE CREATE BATCH";
         cur_pos += batch_size;
         return dynet::sum(errors);
     }
