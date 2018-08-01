@@ -49,7 +49,7 @@ po::variables_map parse_args(int argc, char** argv)
     }
 
     CNLOG << "extract dynet cmdline parameters";
-    DynetParams params = dynet::extract_dynet_params(argc, argv, shared_parameters);
+    DynetParams params = dynet::extract_dynet_params(argc, argv);
     params.random_seed = constants::RAND_SEED;
     dynet::initialize(params);
 
