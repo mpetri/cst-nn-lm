@@ -52,15 +52,15 @@ dynet::Expression build_valid_graph(language_model& lm,dynet::ComputationGraph& 
     lm.rnn.start_new_sequence();
     lm.rnn.disable_dropout();
 
-    i_R = dynet::parameter(cg, lm.p_R);
-    i_bias = dynet::parameter(cg, lm.p_bias);
+    lm.i_R = dynet::parameter(cg, lm.p_R);
+    lm.i_bias = dynet::parameter(cg, lm.p_bias);
 
     std::vector<dynet::Expression> errors(len - 1);
     for (size_t i = 0; i < len - 1; i++) {
         auto cur_sym = *itr++;
         auto next_sym = *itr;
         dynet::Expression i_x_t = dynet::lookup(cg, lm.p_c, cur_sym);
-        dynet::Expression i_y_t = rnn.add_input(i_x_t);
+        dynet::Expression i_y_t = lm.rnn.add_input(i_x_t);
         dynet::Expression i_r_t = i_bias + i_R * i_y_t;
         errors[i] = dynet::pickneglogsoftmax(i_r_t, next_sym);
     }

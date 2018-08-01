@@ -62,8 +62,8 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg, t_itr& s
         lm.rnn.set_dropout(drop_out);
     }
 
-    i_R = dynet::parameter(cg, lm.p_R);
-    i_bias = dynet::parameter(cg, lm.p_bias);
+    lm.i_R = dynet::parameter(cg, lm.p_R);
+    lm.i_bias = dynet::parameter(cg, lm.p_bias);
 
     std::vector<Expression> errs;
     // Set all inputs to the SOS symbol
@@ -203,7 +203,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args)
         }
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
 
-        auto pplx = evaluate_pplx(lm, corpus.vocab, dev_corpus_file);
+        auto pplx = evaluate_pplx(lm, corpus, dev_corpus_file);
         CNLOG << "epoch " << epoch << " dev pplx = " << pplx;
     }
 }
