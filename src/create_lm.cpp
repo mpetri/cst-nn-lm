@@ -65,7 +65,7 @@ int main(int argc, char** argv)
 
     auto lm_type = args["type"].as<std::string>();
     language_model lm(corpus.vocab,args);
-    if(lm_type == "dynet") {
+    if(lm_type == "standard") {
         train_dynet_lm(lm,corpus, args);
     } else if(lm_type == "cst_sent") {
         // train_cst_sent(lm,corpus, args);
