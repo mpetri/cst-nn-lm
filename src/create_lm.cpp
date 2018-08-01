@@ -10,7 +10,7 @@
 #include "logging.hpp"
 
 #include "lm_dynet.hpp"
-#include "lm_cst_sent.hpp"
+// #include "lm_cst_sent.hpp"
 
 namespace po = boost::program_options;
 
@@ -30,6 +30,7 @@ po::variables_map parse_args(int argc, char** argv)
         ("epochs", po::value<size_t>()->default_value(defaults::EPOCHS), "num epochs")
         ("epoch_size", po::value<size_t>()->default_value(0), "epoch size")
         ("drop_out", po::value<double>()->default_value(defaults::DROP_OUT), "drop out rate")
+        ("report_interval", po::value<size_t>()->default_value(defaults::REPORT_INTERVAL), "num epochs")
         ("batch_size", po::value<size_t>()->default_value(defaults::BATCH_SIZE), "batch size");
     // clang-format on
 
@@ -67,9 +68,9 @@ int main(int argc, char** argv)
     if(lm_type == "dynet") {
         train_dynet_lm(lm,corpus, args);
     } else if(lm_type == "cst_sent") {
-        train_cst_sent(lm,corpus, args);
+        // train_cst_sent(lm,corpus, args);
     } else if(lm_type == "cst_sample") {
-        train_cst_lm(lm,corpus, args);
+        // train_cst_lm(lm,corpus, args);
     } else {
         CNLOG << "ERROR: incorrect lm type. options are: dynet, cst_sent, cst_sample";
         exit(EXIT_FAILURE);

@@ -104,6 +104,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args)
 {
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
+    auto report_size = args["report_size"].as<size_t>();
     auto drop_out = args["drop_out"].as<double>();
 
     CNLOG << "start training dynet lm";
@@ -189,14 +190,15 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args)
             std::chrono::duration<double> train_diff = train_end - train_start;
             auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
-            if (std::distance(last_report, itr) > 8192 || batch_end == end) {
+            if (std::distance(last_report, itr) > report_size || batch_end == end) {
                 double percent = double(std::distance(start, itr)) / double(sentences.size()) * 100;
                 last_report = itr;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << std::distance(start, itr) << "/" << sentences.size()
                       << " batch_size = " << actual_batch_size
-                      << " FW/BW/UPDATE  - "
-                      << time_per_instance << "ms/instance - loss = " << instance_loss;
+                      << " TIME = "<< time_per_instance << "ms/instance"
+                      << " num_predictions = " << num_predictions
+                      << " ppl = " << exp(instance_loss);
             }
         }
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";

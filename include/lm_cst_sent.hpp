@@ -276,9 +276,10 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << std::distance(start, itr) << "/" << instances.size()
                       << " batch_size = " << actual_batch_size
-                      << " FW/BW/UPDATE  - loss_comp "
-                      << time_per_loss_instance << "ms/instance | train "
-                      << time_per_instance << "ms/instance - loss = " << instance_loss;
+                      << " TIME[loss_comp] = " << time_per_loss_instance << "ms/instance" 
+                      << " TIME[nn] = " << time_per_instance << "ms/instance"
+                      << " num_predictions = " << num_predictions
+                      << " ppl = " << exp(instance_loss);
             }
         }
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
