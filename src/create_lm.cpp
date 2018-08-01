@@ -47,6 +47,12 @@ po::variables_map parse_args(int argc, char** argv)
         std::cout << desc << std::endl;
         exit(EXIT_SUCCESS);
     }
+
+    CNLOG << "extract dynet cmdline parameters";
+    DynetParams params = dynet::extract_dynet_params(argc, argv, shared_parameters);
+    params.random_seed = constants::RAND_SEED;
+    dynet::initialize(params);
+
     return args;
 }
 
@@ -61,8 +67,6 @@ int main(int argc, char** argv)
     auto corpus = data_loader::load(args);
 
     CNLOG << "create language model";
-    dynet::initialize(argc, argv);
-
     auto lm_type = args["type"].as<std::string>();
     language_model lm(corpus.vocab,args);
     if(lm_type == "standard") {
@@ -72,7 +76,7 @@ int main(int argc, char** argv)
     } else if(lm_type == "cst_sample") {
         // train_cst_lm(lm,corpus, args);
     } else {
-        CNLOG << "ERROR: incorrect lm type. options are: dynet, cst_sent, cst_sample";
+        CNLOG << "ERROR: incorrect lm type. options are: standard, cst_sent, cst_sample";
         exit(EXIT_FAILURE);
     }
 
