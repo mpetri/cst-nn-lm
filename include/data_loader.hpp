@@ -225,7 +225,7 @@ struct data_loader {
               << std::fixed << std::setprecision(1)
               << double(c.num_oov * 100) / double(c.num_tokens) << "%)";
         CNLOG << "\t\tsentence len dist = ";
-        std::vector<uint32_t> sent_len_dist(constants::MAX_SENTENCE_LEN);
+        std::vector<uint32_t> sent_len_dist(constants::MAX_SENTENCE_LEN+3); // <s> </s> 
         for(size_t i=0;i<c.sent_lens.size();i++) {
             sent_len_dist[c.sent_lens[i]]++;
         }
