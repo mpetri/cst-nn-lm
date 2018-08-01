@@ -104,7 +104,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args)
 {
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
-    auto report_size = args["report_size"].as<size_t>();
+    int64_t report_size = args["report_size"].as<size_t>();
     auto drop_out = args["drop_out"].as<double>();
 
     CNLOG << "start training dynet lm";
