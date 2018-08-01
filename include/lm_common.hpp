@@ -61,7 +61,7 @@ dynet::Expression build_valid_graph(language_model& lm,dynet::ComputationGraph& 
         auto next_sym = *itr;
         dynet::Expression i_x_t = dynet::lookup(cg, lm.p_c, cur_sym);
         dynet::Expression i_y_t = lm.rnn.add_input(i_x_t);
-        dynet::Expression i_r_t = i_bias + i_R * i_y_t;
+        dynet::Expression i_r_t = lm.i_bias + lm.i_R * i_y_t;
         errors[i] = dynet::pickneglogsoftmax(i_r_t, next_sym);
     }
     return dynet::sum(errors);

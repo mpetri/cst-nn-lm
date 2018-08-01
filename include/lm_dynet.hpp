@@ -89,7 +89,7 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg, t_itr& s
         // Run one step of the rnn : y_t = RNN(x_t)
         auto i_y_t = lm.rnn.add_input(i_x_t);
         // Project to the token space using an affine transform
-        auto i_r_t = i_bias + i_R * i_y_t;
+        auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
         // Compute error for each member of the batch
         auto i_err = dynet::pickneglogsoftmax(i_r_t, next_tok);
         errs.push_back(i_err);
@@ -137,7 +137,6 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args)
 
         CNLOG << "shuffle sentences";
         // (0) remove existing padding if necessary
-	    size_t max_len = 0;
         for (auto& instance : sentences) {
             instance.sentence.resize(instance.real_len);
 	        instance.padding = 0;
