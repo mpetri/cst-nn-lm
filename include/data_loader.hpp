@@ -224,6 +224,17 @@ struct data_loader {
         CNLOG << "\t\tnum oov = " << c.num_oov << " ("
               << std::fixed << std::setprecision(1)
               << double(c.num_oov * 100) / double(c.num_tokens) << "%)";
+        CNLOG << "\t\tsentence len dist = ";
+        std::vector<uint32_t> sent_len_dist(constants::MAX_SENTENCE_LEN);
+        for(size_t i=0;i<c.sent_lens.size();i++) {
+            sent_len_dist[c.sent_lens[i]]++;
+        }
+        for(size_t i=0;i<sent_len_dist.size();i++) {
+            if(sent_len_dist[i] != 0) {
+                double percent = 100.0 * double(sent_len_dist[i]) / double(c.num_sentences);
+                CNLOG << "\t\t\tlen " << i << " - occ " << sent_len_dist[i] << " (" << percent << "%)";
+            }
+        }
         return c;
     }
 

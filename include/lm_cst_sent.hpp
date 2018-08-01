@@ -23,6 +23,7 @@
 using cst_node_type = typename cst_type::node_type;
 
 struct instance_t {
+    bool all_one_hot;
     std::vector<uint32_t> sentence;
     size_t padding = 0;
     size_t real_len = 0;
@@ -44,141 +45,64 @@ struct instance_t {
     }
 };
 
-struct language_model2 {
-    dynet::ParameterCollection model;
-    uint32_t LAYERS;
-    uint32_t INPUT_DIM;
-    uint32_t HIDDEN_DIM;
-    uint32_t VOCAB_SIZE;
-    dynet::LookupParameter p_c;
-    dynet::Parameter p_R;
-    dynet::Parameter p_bias;
-    dynet::Expression i_c;
-    dynet::Expression i_R;
-    dynet::Expression i_bias;
-    dynet::LSTMBuilder rnn;
+template <class t_itr>
+std::tuple<dynet::Expression, size_t> build_train_graph_cst_sent(
+    language_model& lm,
+    dynet::ComputationGraph& cg, t_itr& start, t_itr& end,
+    std::vector<std::vector<float>>& dists,const corpus_t& corpus,
+    double drop_out)
+{
+    size_t batch_size = std::distance(start, end);
+    size_t sentence_len = start->sentence.size();
 
-    language_model2(const vocab_t& vocab, args_t& args)
-    {
-        LAYERS = args["layers"].as<uint32_t>();
-        INPUT_DIM = args["input_dim"].as<uint32_t>();
-        HIDDEN_DIM = args["hidden_dim"].as<uint32_t>();
-        VOCAB_SIZE = vocab.size();
-        CNLOG << "LM parameters ";
-        CNLOG << "\tlayers = " << LAYERS;
-        CNLOG << "\tinput_dim = " << INPUT_DIM;
-        CNLOG << "\thidden_dim = " << HIDDEN_DIM;
-        CNLOG << "\tvocab size = " << VOCAB_SIZE;
-
-        // Add embedding parameters to the model
-        p_c = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
-        p_R = model.add_parameters({ VOCAB_SIZE, HIDDEN_DIM });
-        p_bias = model.add_parameters({ VOCAB_SIZE });
-        rnn = dynet::LSTMBuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model);
+    lm.rnn.new_graph(cg);
+    lm.rnn.start_new_sequence();
+    if(drop_out != 0.0) {
+        lm.rnn.set_dropout(drop_out);
     }
 
-    template <class t_itr>
-    std::tuple<dynet::Expression, size_t> build_train_graph_batch(dynet::ComputationGraph& cg, t_itr& start, t_itr& end,
-        std::vector<std::vector<float>>& dists,const corpus_t& corpus)
-    {
-        size_t batch_size = std::distance(start, end);
-        size_t sentence_len = start->sentence.size();
+    i_R = dynet::parameter(cg, lm.p_R);
+    i_bias = dynet::parameter(cg, lm.p_bias);
+    // Initialize variables for batch errors
+    std::vector<dynet::Expression> errs;
 
-        // Initialize the RNN for a new computation graph
-        rnn.new_graph(cg);
-        // Prepare for new sequence (essentially set hidden states to 0)
-        rnn.start_new_sequence();
-        // Instantiate embedding parameters in the computation graph
-        // output -> word rep parameters (matrix + bias)
-        i_R = parameter(cg, p_R);
-        i_bias = parameter(cg, p_bias);
-        // Initialize variables for batch errors
-        std::vector<dynet::Expression> errs;
+    // Set all inputs to the SOS symbol
+    auto sos_tok = start->sentence.front();
+    std::vector<uint32_t> current_tok(batch_size, sos_tok);
+    std::vector<uint32_t> next_tok(batch_size);
 
-        // Set all inputs to the SOS symbol
-        auto sos_tok = start->sentence.front();
-        std::vector<uint32_t> current_tok(batch_size, sos_tok);
-        std::vector<uint32_t> next_tok(batch_size);
+    // Run rnn on batch
+    size_t actual_predictions = 0;
+    for (size_t j = 0; j < batch_size; j++) {
+        auto instance = start + j;
+        actual_predictions += (instance->real_len - 1);
+    }
 
-        // Run rnn on batch
-        size_t actual_predictions = 0;
+    for (size_t i = 0; i < sentence_len - 1; ++i) {
         for (size_t j = 0; j < batch_size; j++) {
             auto instance = start + j;
-            actual_predictions += (instance->real_len - 1);
+            next_tok[j] = instance->sentence[i+1];
         }
 
-        for (size_t i = 0; i < sentence_len - 1; ++i) {
-            for (size_t j = 0; j < batch_size; j++) {
-                auto instance = start + j;
-                next_tok[j] = instance->sentence[i+1];
-            }
+        // Embed the current tokens
+        auto i_x_t = dynet::lookup(cg, lm.p_c, current_tok);
+        // Run one step of the rnn : y_t = RNN(x_t)
+        auto i_y_t = lm.rnn.add_input(i_x_t);
+        // Project to the token space using an affine transform
+        auto i_r_t = i_bias + i_R * i_y_t;
 
-            // Embed the current tokens
-            auto i_x_t = dynet::lookup(cg, p_c, current_tok);
-            // Run one step of the rnn : y_t = RNN(x_t)
-            auto i_y_t = rnn.add_input(i_x_t);
-            // Project to the token space using an affine transform
-            auto i_r_t = i_bias + i_R * i_y_t;
+        // Compute error for each member of the batch
+        dynet::Expression i_pred = -dynet::log_softmax(i_r_t);
+        dynet::Expression i_pred_linear = dynet::reshape(i_pred, { (unsigned int) dists[i].size() });
+        dynet::Expression i_true = dynet::input(cg, { (unsigned int)dists[i].size() }, dists[i]);
+        dynet::Expression i_error = dynet::transpose(i_true) * i_pred_linear;
+        errs.push_back(i_error);
 
-            // Compute error for each member of the batch
-            dynet::Expression i_pred = -dynet::log_softmax(i_r_t);
-            dynet::Expression i_pred_linear = dynet::reshape(i_pred, { (unsigned int) dists[i].size() });
-            dynet::Expression i_true = dynet::input(cg, { (unsigned int)dists[i].size() }, dists[i]);
-            dynet::Expression i_error = dynet::transpose(i_true) * i_pred_linear;
-            errs.push_back(i_error);
-
-            // Change input
-            current_tok = next_tok;
-        }
-        // Add all errors
-        return std::make_tuple(dynet::sum(errs), actual_predictions);
+        // Change input
+        current_tok = next_tok;
     }
-
-    template <class t_itr>
-    dynet::Expression build_valid_graph(dynet::ComputationGraph& cg, t_itr itr, size_t len)
-    {
-
-        // Initialize the RNN for a new computation graph
-        rnn.new_graph(cg);
-        // Prepare for new sequence (essentially set hidden states to 0)
-        rnn.start_new_sequence();
-        // Instantiate embedding parameters in the computation graph
-        // output -> word rep parameters (matrix + bias)
-        i_R = dynet::parameter(cg, p_R);
-        i_bias = dynet::parameter(cg, p_bias);
-
-        std::vector<dynet::Expression> errors(len - 1);
-        for (size_t i = 0; i < len - 1; i++) {
-            auto cur_sym = *itr++;
-            auto next_sym = *itr;
-            dynet::Expression i_x_t = dynet::lookup(cg, p_c, cur_sym);
-            dynet::Expression i_y_t = rnn.add_input(i_x_t);
-            dynet::Expression i_r_t = i_bias + i_R * i_y_t;
-            errors[i] = pickneglogsoftmax(i_r_t, next_sym);
-        }
-        return dynet::sum(errors);
-    }
-};
-
-double
-evaluate_pplx(language_model2& lm, const vocab_t& vocab, std::string file)
-{
-    double loss = 0.0;
-    double predictions = 0;
-
-    auto corpus = data_loader::parse_file(vocab, file);
-    boost::progress_display show_progress(corpus.num_sentences);
-    for (size_t i = 0; i < corpus.num_sentences; i++) {
-        auto start_sent = corpus.text.begin() + corpus.sent_starts[i];
-        auto sent_len = corpus.sent_lens[i];
-
-        dynet::ComputationGraph cg;
-        auto loss_expr = lm.build_valid_graph(cg, start_sent, sent_len);
-        loss += dynet::as_scalar(cg.forward(loss_expr));
-        predictions += sent_len - 1;
-        ++show_progress;
-    }
-    return exp(loss / predictions);
+    // Add all errors
+    return std::make_tuple(dynet::sum(errs), actual_predictions);
 }
 
 template<class t_itr>
@@ -247,12 +171,21 @@ std::vector<std::vector<float>> compute_batch_losses(const cst_type& cst,const c
 }
 
 
-language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& args)
+void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
 {
+    CNLOG << "build or load CST";
+    auto cst = build_or_load_cst(corpus, args);
+
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
-    language_model2 lm(corpus.vocab, args);
+    auto epoch_size = args["epoch_size"].as<size_t>();
+    auto drop_out = args["drop_out"].as<double>();
 
+    CNLOG << "start training cst sentence lm";
+    CNLOG << "\tepochs = " << num_epochs;
+    CNLOG << "\tepoch_size = " << num_epochs;
+    CNLOG << "\tbatch_size = " << batch_size;
+    CNLOG << "\tdrop_out = " << drop_out;
     auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
 
     // (1) create the batches
@@ -266,13 +199,12 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
     }
     auto prep_end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> prep_diff = prep_end - prep_start;
-    CNLOG << "CREATE INSTANCES "
-          << " - " << prep_diff.count() << "s";
+    CNLOG << "created batches in " << " - " << prep_diff.count() << "s";
 
     CNLOG << "NUMBER OF INSTANCES = " << instances.size();
     dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
     trainer.clip_threshold = trainer.clip_threshold * batch_size;
-    std::mt19937 gen(12345);
+    std::mt19937 gen(constants::RAND_SEED);
     std::uniform_int_distribution<> dis(0,100000000);
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
@@ -282,7 +214,6 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 	    size_t max_len = 0;
         for (auto& instance : instances) {
             instance.sentence.resize(instance.real_len);
-            // CNLOG << "instance sentence " << corpus.vocab.print_sentence(instance.sentence);
             instance.padding = 0;
             instance.rand = dis(gen);
         }
@@ -327,7 +258,7 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
 
             dynet::ComputationGraph cg;
             auto train_start = std::chrono::high_resolution_clock::now();
-            auto loss_tuple = lm.build_train_graph_batch(cg, itr, batch_end,batch_losses,corpus);
+            auto loss_tuple = build_train_graph_cst_sent(lm,cg, itr, batch_end,batch_losses,corpus,drop_out);
             auto loss_expr = std::get<0>(loss_tuple);
             auto num_predictions = std::get<1>(loss_tuple);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
@@ -353,7 +284,7 @@ language_model2 create_lm(const cst_type& cst, const corpus_t& corpus, args_t& a
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
 
         auto pplx = evaluate_pplx(lm, corpus.vocab, dev_corpus_file);
-        CNLOG << "epoch dev pplx = " << pplx;
+        CNLOG << "epoch " << epoch MM << " dev pplx = " << pplx;
     }
 
     return lm;

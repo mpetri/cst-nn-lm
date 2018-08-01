@@ -9,6 +9,7 @@ size_t EPOCHS = 20;
 size_t BATCH_SIZE = 32;
 size_t THREADS = 16;
 size_t THRESHOLD = 10;
+double DROP_OUT = 0.5;
 }
 
 namespace constants {

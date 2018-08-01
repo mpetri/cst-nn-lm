@@ -10,7 +10,7 @@
 #include "dynet/timing.h"
 #include "dynet/training.h"
 
-struct language_model4 {
+struct language_model {
     dynet::ParameterCollection model;
     uint32_t LAYERS;
     uint32_t INPUT_DIM;
@@ -24,7 +24,7 @@ struct language_model4 {
     dynet::Expression i_bias;
     dynet::LSTMBuilder rnn;
 
-    language_model4(const vocab_t& vocab, args_t& args)
+    language_model(const vocab_t& vocab, args_t& args)
     {
         LAYERS = args["layers"].as<uint32_t>();
         INPUT_DIM = args["input_dim"].as<uint32_t>();
@@ -45,18 +45,40 @@ struct language_model4 {
 };
 
 
+template <class t_itr>
+dynet::Expression build_valid_graph(language_model& lm,dynet::ComputationGraph& cg, t_itr itr, size_t len)
+{
+    lm.rnn.new_graph(cg);
+    lm.rnn.start_new_sequence();
+    lm.rnn.disable_dropout();
+
+    i_R = dynet::parameter(cg, lm.p_R);
+    i_bias = dynet::parameter(cg, lm.p_bias);
+
+    std::vector<dynet::Expression> errors(len - 1);
+    for (size_t i = 0; i < len - 1; i++) {
+        auto cur_sym = *itr++;
+        auto next_sym = *itr;
+        dynet::Expression i_x_t = dynet::lookup(cg, lm.p_c, cur_sym);
+        dynet::Expression i_y_t = rnn.add_input(i_x_t);
+        dynet::Expression i_r_t = i_bias + i_R * i_y_t;
+        errors[i] = dynet::pickneglogsoftmax(i_r_t, next_sym);
+    }
+    return dynet::sum(errors);
+}
+
 double
-evaluate_pplx(language_model3& lm, const corpus_t& corpus, std::string file)
+evaluate_pplx(language_model& lm, const corpus_t& corpus, std::string file)
 {
     double loss = 0.0;
     double predictions = 0;
     auto test_corpus = data_loader::parse_file(corpus.vocab, file);
-    boost::progress_display show_progress(corpus.num_sentences);
+    boost::progress_display show_progress(test_corpus.num_sentences);
     for (size_t i = 0; i < test_corpus.num_sentences; i++) {
         auto start_sent = test_corpus.text.begin() + test_corpus.sent_starts[i];
         auto sent_len = test_corpus.sent_lens[i];
         dynet::ComputationGraph cg;
-        auto loss_expr = lm.build_valid_graph(cg, start_sent, sent_len);
+        auto loss_expr = build_valid_graph(lm, cg, start_sent, sent_len);
         loss += dynet::as_scalar(cg.forward(loss_expr));
         predictions += sent_len - 1;
         ++show_progress;
