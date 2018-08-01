@@ -104,7 +104,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args)
 {
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
-    int64_t report_size = args["report_size"].as<size_t>();
+    int64_t report_interval = args["report_interval"].as<size_t>();
     auto drop_out = args["drop_out"].as<double>();
 
     CNLOG << "start training dynet lm";
@@ -189,7 +189,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args)
             std::chrono::duration<double> train_diff = train_end - train_start;
             auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
-            if (std::distance(last_report, itr) > report_size || batch_end == end) {
+            if (std::distance(last_report, itr) > report_interval || batch_end == end) {
                 double percent = double(std::distance(start, itr)) / double(sentences.size()) * 100;
                 last_report = itr;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
