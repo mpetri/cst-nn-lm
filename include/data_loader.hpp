@@ -53,8 +53,9 @@ struct vocab_t {
         CNLOG << "load vocab from file " << file_name;
         std::ifstream ifs(file_name);
         for (std::string tok; std::getline(ifs, tok); ) {
-            tok2int[tok] = int2tok.size();
-            int2tok[int2tok.size()] = tok;
+            size_t id = int2tok.size();
+            tok2int[tok] = id;
+            int2tok[id] = tok;
         }
     }
 
