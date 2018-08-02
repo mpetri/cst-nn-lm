@@ -21,23 +21,16 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-if (UNIX)
-   # C++11
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-   # For hardware popcount and other special instructions
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-   # Extensive warnings
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-missing-braces -Wno-unused-variable")
-   # Silence a warning bug in Boost
-   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-local-typedefs")
-   endif ()
-   # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wconversion")
-   if (USE_SANITIZERS)
-     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
-   endif ()
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb") # Add debug info anyway
-endif()
+# C++ 14
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+# For hardware popcount and other special instructions
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+# Extensive warnings
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-missing-braces -Wno-unused-variable")
+# Silence a warning bug in Boost
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-local-typedefs")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wconversion")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ggdb") # Add debug info anyway
 
 # set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost COMPONENTS iostreams unit_test_framework filesystem system log log_setup date_time chrono program_options REQUIRED)
