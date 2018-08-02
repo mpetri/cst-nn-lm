@@ -50,6 +50,7 @@ struct vocab_t {
     }
 
     void load(std::string file_name) {
+        CNLOG << "load vocab from file " << file_name;
         std::ifstream ifs(file_name);
         for (std::string tok; std::getline(ifs, tok); ) {
             tok2int[tok] = int2tok.size();
@@ -58,6 +59,7 @@ struct vocab_t {
     }
 
     void store(std::string file_name) {
+        CNLOG << "store vocab to file " << file_name;
         std::ofstream ofs(file_name);
         for(size_t i=4;i<int2tok.size();i++) {
             ofs << int2tok[i] << std::endl;
