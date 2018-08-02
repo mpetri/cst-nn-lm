@@ -52,6 +52,7 @@ struct vocab_t {
     void load(std::string file_name) {
         std::ifstream ifs(file_name);
         for (std::string tok; std::getline(ifs, tok); ) {
+            tok2int[tok] = int2tok.size();
             int2tok[int2tok.size()] = tok;
         }
     }
@@ -149,6 +150,7 @@ struct corpus_t {
     uint64_t num_duplicates = 0;
 
     void store(std::string file_name) {
+        CNLOG << "store parsed corpus to file " << file_name;
         std::ofstream ofs(file_name);
         sdsl::serialize(num_tokens,ofs);
         sdsl::serialize(num_sentences,ofs);
@@ -160,6 +162,7 @@ struct corpus_t {
     }
 
     void load(std::string file_name) {
+        CNLOG << "load parsed corpus from file " << file_name;
         std::ifstream ifs(file_name);
         sdsl::load(num_tokens,ifs);
         sdsl::load(num_sentences,ifs);
