@@ -23,6 +23,7 @@
 struct prefix_batch_t {
     bool keep_dist = false;
     size_t prefix_len;
+    size_t num_predictions;
     size_t size;
     std::vector<std::vector<uint32_t>> prefix;
     std::vector<cst_node_type> cst_nodes;
@@ -157,12 +158,10 @@ build_train_graph_prefix(language_model& lm,dynet::ComputationGraph& cg,prefix_b
     lm.i_R = dynet::parameter(cg, lm.p_R);
     lm.i_bias = dynet::parameter(cg, lm.p_bias);
     for (size_t i = 0; i < batch.prefix.size()-1; ++i) {
-        dynet::Expression i_x_t = dynet::lookup(cg, lm.p_c, batch.prefix[i]);
-        lm.rnn.add_input(i_x_t);
+        lm.rnn.add_input(dynet::lookup(cg, lm.p_c, batch.prefix[i]));
     }
     auto last_toks = batch.prefix.back();
-    dynet::Expression i_x_t = dynet::lookup(cg, lm.p_c, last_toks);
-    dynet::Expression i_y_t = lm.rnn.add_input(i_x_t);
+    dynet::Expression i_y_t = lm.rnn.add_input(dynet::lookup(cg, lm.p_c, last_toks));
     dynet::Expression i_r_t = lm.i_bias + lm.i_R * i_y_t;
 
     dynet::Expression i_pred = -dynet::log_softmax(i_r_t);
@@ -193,7 +192,6 @@ build_train_graph_sents(language_model& lm,dynet::ComputationGraph& cg,one_hot_b
     for (size_t i = 0; i < batch.suffix.size()-1; ++i) {
         auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
         auto i_err = dynet::pickneglogsoftmax(i_r_t, batch.suffix[i]);
-        num_predictions += batch.size;
         errs.push_back(i_err);
         auto i_x_t = dynet::lookup(cg, lm.p_c, batch.suffix[i]);
         i_y_t = lm.rnn.add_input(i_x_t);
@@ -201,14 +199,13 @@ build_train_graph_sents(language_model& lm,dynet::ComputationGraph& cg,one_hot_b
     auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
     auto i_err = dynet::pickneglogsoftmax(i_r_t, batch.suffix.back());
     errs.push_back(i_err);
-    num_predictions += batch.size;
-    return std::make_pair(dynet::sum_batches(dynet::sum(errs)),num_predictions);
+    return std::make_pair(dynet::sum_batches(dynet::sum(errs)),batch.num_predictions);
 }
 
 void compute_dist(prefix_batch_t& pb,const cst_type& cst,const corpus_t& corpus) {
     if(pb.dist.size() == 0) {
         pb.dist.resize(pb.size*corpus.vocab.size());
-        size_t num_children = 0;
+        pb.num_predictions = 0;
         for(size_t i=0;i<pb.cst_nodes.size();i++) {
             auto offset = i * corpus.vocab.size();
             auto node = pb.cst_nodes[i];
@@ -217,11 +214,11 @@ void compute_dist(prefix_batch_t& pb,const cst_type& cst,const corpus_t& corpus)
                 auto tok = cst.edge(child, node_depth + 1);
                 double size = cst.size(child);
                 pb.dist[offset+tok] = size;
-                num_children++;
+                pb.num_predictions++;
             }
         }
 
-        if(num_children > 100) {
+        if(pb.num_predictions > 100) {
             pb.keep_dist = true;
         }
     }
