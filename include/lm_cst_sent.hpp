@@ -121,7 +121,6 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
         sb.size = std::distance(batch_start,batch_end);
         sb.prefix.resize(batch_start->prefix.size());
         sb.suffix.resize(batch_start->suffix.size());
-        sb.dist.reserve(pb.size*corpus.vocab.size());
         for(size_t i=0;i<sb.prefix.size();i++) {
             for(size_t j=0;j<sb.size;j++) {
                 auto& cp = (batch_start + j)->prefix;
