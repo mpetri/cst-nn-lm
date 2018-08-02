@@ -67,7 +67,7 @@ edge_label(const cst_type& cst,cst_node_type node)
 prefix_t
 add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type node,const corpus_t& corpus)
 {
-    if(!cst.is_leaf(cur_node)) {
+    if(!cst.is_leaf(node)) {
         prefix_t p;
         p.prefix = edge_label(node);
         p.dist.resize(corpus.vocab.size());
@@ -75,7 +75,7 @@ add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type nod
         for (const auto& child : cst.children(node)) {
             auto tok = cst.edge(child, node_depth + 1);
             double size = cst.size(child);
-            dist[tok] = size;
+            p.dist[tok] = size;
         }
         prefixes.push_back(p);
     }

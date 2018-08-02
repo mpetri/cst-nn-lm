@@ -20,12 +20,10 @@
 #include "data_loader.hpp"
 #include "logging.hpp"
 
-
-
 struct prefix_instance_t {
     std::vector<uint32_t> prefix;
     std::vector<float> dist;
-}
+};
 
 struct one_hot_instance_t {
     std::vector<uint32_t> sentence;
@@ -49,7 +47,7 @@ using prefix_batches_t = std::vector<prefix_batch_t>;
 using one_hot_batches_t = std::vector<one_hot_batch_t>;
 
 prefix_batches_t
-create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus)
+create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus,size_t batch_size)
 {
     prefix_batches_t prefix_batches;
     std::sort(all_prefixes.begin(),all_prefixes.end());
@@ -74,16 +72,16 @@ create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus
         prefix_batch_t pb;
         pb.prefix_len = batch_start->prefix.size();
         pb.size = std::distance(batch_start,batch_end);
-        pb.prefix.resize(prefix_len);
+        pb.prefix.resize(pb.prefix_len);
         pb.dist.reserve(pb.size*corpus.vocab.size());
-        for(size_t i=0;i<prefix_len;i++) {
+        for(size_t i=0;i<pb.prefix_len;i++) {
             for(size_t j=0;j<pb.size;j++) {
-                auto& cp = *(batch_start + j).prefix;
+                auto& cp = (batch_start + j)->prefix;
                 pb.prefix[i].push_back(cp[i]);
             }
         }
         for(size_t j=0;j<pb.size;j++) {
-            auto& cpd = *(batch_start + j).dist;
+            auto& cpd = (batch_start + j)->dist;
             std::copy(cpd.begin(),cpd.end(),std::back_inserter(pb.dist));
         }
         prefix_batches.emplace_back(std::move(pb));
@@ -94,7 +92,7 @@ create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus
 }
 
 one_hot_batches_t
-create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& corpus)
+create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& corpus,size_t batch_size)
 {
     one_hot_batches_t sent_batches;
     std::sort(all_sentences.begin(),all_sentences.end());
@@ -123,17 +121,17 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
         sb.size = std::distance(batch_start,batch_end);
         sb.prefix.resize(batch_start->prefix.size());
         sb.suffix.resize(batch_start->suffix.size());
-        pb.dist.reserve(pb.size*corpus.vocab.size());
+        sb.dist.reserve(pb.size*corpus.vocab.size());
         for(size_t i=0;i<sb.prefix.size();i++) {
-            for(size_t j=0;j<pb.size;j++) {
-                auto& cp = *(batch_start + j).prefix;
-                pb.prefix[i].push_back(cp[i]);
+            for(size_t j=0;j<sb.size;j++) {
+                auto& cp = (batch_start + j)->prefix;
+                sb.prefix[i].push_back(cp[i]);
             }
         }
         for(size_t i=0;i<sb.suffix.size();i++) {
-            for(size_t j=0;j<pb.size;j++) {
-                auto& cs = *(batch_start + j).suffix;
-                pb.suffix[i].push_back(cs[i]);
+            for(size_t j=0;j<sb.size;j++) {
+                auto& cs = (batch_start + j)->suffix;
+                sb.suffix[i].push_back(cs[i]);
             }
         }
         sent_batches.emplace_back(std::move(sb));
@@ -150,8 +148,8 @@ create_train_batches(const cst_type& cst,const corpus_t& corpus, args_t& args,si
     auto all_prefixes = find_all_prefixes(cst,corpus);
     auto all_sentences = find_all_sentences(all_prefixes,cst,corpus);
 
-    auto prefix_batches = create_prefix_batches(all_prefixes,corpus);
-    auto sent_batches = create_sentence_batches(all_sentences,corpus);
+    auto prefix_batches = create_prefix_batches(all_prefixes,corpus,batch_size);
+    auto sent_batches = create_sentence_batches(all_sentences,corpus,batch_size);
 
     return std::make_tuple(prefix_batches,sent_batches);
 }
@@ -205,7 +203,7 @@ build_train_graph_sents(language_model& lm,dynet::ComputationGraph& cg,one_hot_b
         auto i_err = dynet::pickneglogsoftmax(i_r_t, batch.suffix[i]);
         num_predictions += batch.size;
         errs.push_back(i_err);
-        i_x_t = dynet::lookup(cg, lm.p_c, batch.suffix[i]);
+        auto i_x_t = dynet::lookup(cg, lm.p_c, batch.suffix[i]);
         i_y_t = lm.rnn.add_input(i_x_t);
     }
     auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
