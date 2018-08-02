@@ -70,7 +70,7 @@ edge_label(const cst_type& cst,cst_node_type node)
     return label;
 }
 
-prefix_t
+void
 add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type node,const corpus_t& corpus)
 {
     if(!cst.is_leaf(node)) {
@@ -83,9 +83,6 @@ add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type nod
             auto tok = cst.edge(child, node_depth + 1);
             double size = cst.size(child);
             p.dist[tok] = size;
-            if(tok >= p.dist.size() ) {
-                CNLOG << "ERROR: tok = " << tok << " p.dist size = " << p.dist.size();
-            }
         }
         prefixes.push_back(p);
     }
@@ -119,7 +116,7 @@ find_all_prefixes(const cst_type& cst,const corpus_t& corpus)
     return prefixes;
 }
 
-sentence_t
+void
 add_sentence(std::vector<sentence_t>& sentences,prefix_t& p,size_t tok,const cst_type& cst,const corpus_t& corpus)
 {
     if(tok != corpus.vocab.stop_sent_tok) {
