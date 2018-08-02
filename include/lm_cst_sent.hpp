@@ -20,20 +20,12 @@
 #include "data_loader.hpp"
 #include "logging.hpp"
 
-struct prefix_instance_t {
-    std::vector<uint32_t> prefix;
-    std::vector<float> dist;
-};
-
-struct one_hot_instance_t {
-    std::vector<uint32_t> sentence;
-    size_t non_one_hot_prefix_len = 0;
-};
-
 struct prefix_batch_t {
+    bool keep_dist = false;
     size_t prefix_len;
     size_t size;
     std::vector<std::vector<uint32_t>> prefix;
+    std::vector<cst_node_type> cst_nodes;
     std::vector<float> dist;
 };
 
@@ -74,7 +66,6 @@ create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus
         pb.prefix_len = batch_start->prefix.size();
         pb.size = std::distance(batch_start,batch_end);
         pb.prefix.resize(pb.prefix_len);
-        pb.dist.reserve(pb.size*corpus.vocab.size());
         for(size_t i=0;i<pb.prefix_len;i++) {
             for(size_t j=0;j<pb.size;j++) {
                 auto& cp = (batch_start + j)->prefix;
@@ -82,8 +73,8 @@ create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus
             }
         }
         for(size_t j=0;j<pb.size;j++) {
-            auto& cpd = (batch_start + j)->dist;
-            std::copy(cpd.begin(),cpd.end(),std::back_inserter(pb.dist));
+            auto node = (batch_start + j)->node;
+            pb.cst_nodes.push_back(node);
         }
         prefix_batches.emplace_back(std::move(pb));
         prefix_itr += pb.size;
@@ -155,7 +146,7 @@ create_train_batches(const cst_type& cst,const corpus_t& corpus, args_t& args,si
     return std::make_tuple(prefix_batches,sent_batches);
 }
 
-std::tuple<dynet::Expression, size_t> 
+std::tuple<dynet::Expression, size_t>
 build_train_graph_prefix(language_model& lm,dynet::ComputationGraph& cg,prefix_batch_t& batch,double drop_out)
 {
     lm.rnn.new_graph(cg);
@@ -214,6 +205,28 @@ build_train_graph_sents(language_model& lm,dynet::ComputationGraph& cg,one_hot_b
     return std::make_pair(dynet::sum_batches(dynet::sum(errs)),num_predictions);
 }
 
+void compute_dist(prefix_batch_t& pb,const cst_type& cst,const corpus_t& corpus) {
+    if(pb.dist.size() == 0) {
+        pb.dist.resize(pb.size*corpus.vocab.size());
+        size_t num_children = 0;
+        for(size_t i=0;i<pb.cst_nodes.size();i++) {
+            auto offset = i * corpus.vocab.size();
+            auto node = pb.cst_nodes[i];
+            auto node_depth = cst.depth(node);
+            for (const auto& child : cst.children(node)) {
+                auto tok = cst.edge(child, node_depth + 1);
+                double size = cst.size(child);
+                pb.dist[offset+tok] = size;
+                num_children++;
+            }
+        }
+
+        if(num_children > 100) {
+            pb.keep_dist = true;
+        }
+    }
+}
+
 void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
 {
     CNLOG << "build or load CST";
@@ -253,25 +266,35 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
         for(size_t i=0;i<batch_ids.size();i++) {
             auto train_start = std::chrono::high_resolution_clock::now();
             auto cur_batch_id = batch_ids[i];
-            
+
             dynet::Expression loss;
             size_t num_predictions;
             dynet::ComputationGraph cg;
+            float loss_float;
             if(cur_batch_id >= prefix_batches.size()) {
                 auto& cur_batch = one_hot_batches[cur_batch_id-prefix_batches.size()];
+                compute_dist(cur_batch,cst,corpus);
+
                 trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
                 std::tie(loss,num_predictions) = build_train_graph_sents(lm,cg,cur_batch,drop_out);
+                loss_float = dynet::as_scalar(cg.forward(loss));
+                cg.backward(loss);
+                trainer.update();
+
+                if(!cur_batch.keep_dist) {
+                    cur_batch.dist.clear();
+                }
             } else {
                 auto& cur_batch = prefix_batches[cur_batch_id];
                 trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
                 std::tie(loss,num_predictions) = build_train_graph_prefix(lm,cg,cur_batch,drop_out);
+
+                loss_float = dynet::as_scalar(cg.forward(loss));
+                cg.backward(loss);
+                trainer.update();
             }
 
-            auto loss_float = dynet::as_scalar(cg.forward(loss));
             auto instance_loss = loss_float / num_predictions;
-            cg.backward(loss);
-            trainer.update();
-
             auto train_stop = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> train_diff = train_stop - train_start;
             auto time_per_instance = train_diff.count() / num_predictions * 1000.0;

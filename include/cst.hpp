@@ -37,13 +37,12 @@ cst_type build_or_load_cst(const corpus_t& corpus, args_t& args)
 struct prefix_t {
     cst_node_type node;
     std::vector<uint32_t> prefix;
-    std::vector<float> dist;
     bool operator<(const prefix_t& other) const {
         return prefix.size() < other.prefix.size();
     }
 
     size_t size_in_bytes() const {
-        return prefix.size()*sizeof(uint32_t) + dist.size()*sizeof(float)+sizeof(cst_node_type);
+        return prefix.size()*sizeof(uint32_t)+sizeof(cst_node_type);
     }
 };
 
@@ -78,12 +77,7 @@ add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type nod
         p.node = node;
         p.prefix = edge_label(cst,node);
         p.dist.resize(corpus.vocab.size());
-        auto node_depth = cst.depth(node);
-        for (const auto& child : cst.children(node)) {
-            auto tok = cst.edge(child, node_depth + 1);
-            double size = cst.size(child);
-            p.dist[tok] = size;
-        }
+
         prefixes.push_back(p);
     }
 }
