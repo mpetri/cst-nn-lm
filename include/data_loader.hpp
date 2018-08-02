@@ -20,6 +20,7 @@ namespace po = boost::program_options;
 using args_t = po::variables_map;
 
 namespace constants {
+std::string PARSED_TRAIN_FILE = "train-parsed.txt";
 std::string TRAIN_FILE = "train.txt";
 std::string DEV_FILE = "valid.txt";
 std::string TEST_FILE = "test.txt";
@@ -47,6 +48,21 @@ struct vocab_t {
         start_sent_tok = add_token("<s>");
         unk_tok = add_token("<unk>");
     }
+
+    void load(std::string file_name) {
+        std::ifstream ifs(file_name);
+        for (std::string tok; std::getline(ifs, tok); ) {
+            int2tok[int2tok.size()] = tok;
+        }
+    }
+
+    void store(std::string file_name) {
+        std::ofstream ofs(file_name);
+        for(size_t i=4;i<int2tok.size();i++) {
+            ofs << int2tok[i] << std::endl;
+        }
+    }
+
     uint32_t add_token(const std::string& tok)
     {
         auto itr = tok2int.find(tok);
@@ -124,13 +140,35 @@ struct vocab_t {
 struct corpus_t {
     std::string file;
     vocab_t vocab;
-    std::vector<uint32_t> sent_starts;
-    std::vector<uint32_t> sent_lens;
+    sdsl::int_vector<32> sent_starts;
+    sdsl::int_vector<32> sent_lens;
     sdsl::int_vector<32> text;
-    size_t num_tokens = 0;
-    size_t num_sentences = 0;
-    size_t num_oov = 0;
-    size_t num_duplicates = 0;
+    uint64_t num_tokens = 0;
+    uint64_t num_sentences = 0;
+    uint64_t num_oov = 0;
+    uint64_t num_duplicates = 0;
+
+    void store(std::string file_name) {
+        std::ofstream ofs(file_name);
+        sdsl::serialize(num_tokens,ofs);
+        sdsl::serialize(num_sentences,ofs);
+        sdsl::serialize(num_oov,ofs);
+        sdsl::serialize(num_duplicates,ofs);
+        sdsl::serialize(sent_starts,ofs);
+        sdsl::serialize(sent_lens,ofs);
+        sdsl::serialize(text,ofs);
+    }
+
+    void load(std::string file_name) {
+        std::ifstream ifs(file_name);
+        sdsl::load(num_tokens,ifs);
+        sdsl::load(num_sentences,ifs);
+        sdsl::load(num_oov,ifs);
+        sdsl::load(num_duplicates,ifs);
+        sdsl::load(sent_starts,ifs);
+        sdsl::load(sent_lens,ifs);
+        sdsl::load(text,ifs);
+    }
 };
 
 struct data_loader {
@@ -144,9 +182,10 @@ struct data_loader {
 
     static vocab_t create_or_load_vocab(args_t& args)
     {
+        auto threshold = args["vocab_size"].as<uint32_t>();
         auto path = args["path"].as<std::string>();
         auto train_file = path + "/" + constants::TRAIN_FILE;
-        auto vocab_file = path + "/" + constants::VOCAB_FILE;
+        auto vocab_file = path + "/" + constants::VOCAB_FILE + "-" + std::to_string(threshold);
 
         if (boost::filesystem::exists(vocab_file)) {
             vocab_t v;
@@ -154,7 +193,6 @@ struct data_loader {
             return v;
         }
 
-        auto threshold = args["vocab_size"].as<uint32_t>();
         CNLOG << "\tcreate vocabulary with threshold = " << threshold << " from " << train_file;
         vocab_t v;
         v.max_size = threshold;
@@ -222,12 +260,22 @@ struct data_loader {
 
     static corpus_t load(args_t& args)
     {
+        auto vocab_threshold = args["vocab_size"].as<uint32_t>();
         auto directory = args["path"].as<std::string>();
         auto train_file = directory + "/" + constants::TRAIN_FILE;
+        auto parsed_file = directory + "/" + constants::PARSED_TRAIN_FILE + "-" + std::to_string(threshold);
+
         corpus_t c;
         c.file = train_file;
         c.vocab = create_or_load_vocab(args);
-        parse_text(c);
+
+        if (boost::filesystem::exists(parsed_file)) {
+            c.load(parsed_file);
+        } else {
+            parse_text(c);
+            c.store(parsed_file);
+        }
+
         CNLOG << "\t\tnum tokens = " << c.num_tokens;
         CNLOG << "\t\tnum sentences = " << c.num_sentences;
         CNLOG << "\t\tnum duplicate sentences = " << c.num_duplicates;
@@ -235,7 +283,7 @@ struct data_loader {
               << std::fixed << std::setprecision(1)
               << double(c.num_oov * 100) / double(c.num_tokens) << "%)";
         CNLOG << "\t\tsentence len dist = ";
-        std::vector<uint32_t> sent_len_dist(constants::MAX_SENTENCE_LEN+3); // <s> </s> 
+        std::vector<uint32_t> sent_len_dist(constants::MAX_SENTENCE_LEN+3); // <s> </s>
         for(size_t i=0;i<c.sent_lens.size();i++) {
             sent_len_dist[c.sent_lens[i]]++;
         }
