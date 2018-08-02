@@ -189,7 +189,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args)
             std::chrono::duration<double> train_diff = train_end - train_start;
             auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
-            if (std::distance(last_report, itr) > report_size || batch_end == end) {
+            if (std::distance(last_report, itr) > report_interval || batch_end == end) {
                 double percent = double(std::distance(start, itr)) / double(sentences.size()) * 100;
                 last_report = itr;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "

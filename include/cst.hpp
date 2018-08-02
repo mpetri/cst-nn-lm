@@ -39,7 +39,7 @@ struct prefix_t {
     bool operator<(const prefix_t& other) const {
         return prefix.size() < other.prefix.size();
     }
-}
+};
 
 struct sentence_t {
     cst_node_type node;
@@ -51,7 +51,7 @@ struct sentence_t {
         }
         return prefix.size() < other.prefix.size();
     }
-}
+};
 
 std::vector<uint32_t>
 edge_label(nst cst_type& cst,cst_node_type node)
