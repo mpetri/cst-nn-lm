@@ -75,6 +75,7 @@ add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type nod
 {
     if(!cst.is_leaf(node)) {
         prefix_t p;
+        p.node = node;
         p.prefix = edge_label(cst,node);
         p.dist.resize(corpus.vocab.size());
         auto node_depth = cst.depth(node);
@@ -83,7 +84,7 @@ add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type nod
             double size = cst.size(child);
             p.dist[tok] = size;
         }
-        prefixes.emplace_back(std::move(p));
+        prefixes.push_back(p);
     }
 }
 
