@@ -273,10 +273,18 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
             float loss_float;
             if(cur_batch_id >= prefix_batches.size()) {
                 auto& cur_batch = one_hot_batches[cur_batch_id-prefix_batches.size()];
+                trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
+                std::tie(loss,num_predictions) = build_train_graph_sents(lm,cg,cur_batch,drop_out);
+                loss_float = dynet::as_scalar(cg.forward(loss));
+                cg.backward(loss);
+                trainer.update();
+            } else {
+                auto& cur_batch = prefix_batches[cur_batch_id];
                 compute_dist(cur_batch,cst,corpus);
 
                 trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
-                std::tie(loss,num_predictions) = build_train_graph_sents(lm,cg,cur_batch,drop_out);
+                std::tie(loss,num_predictions) = build_train_graph_prefix(lm,cg,cur_batch,drop_out);
+
                 loss_float = dynet::as_scalar(cg.forward(loss));
                 cg.backward(loss);
                 trainer.update();
@@ -284,14 +292,6 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
                 if(!cur_batch.keep_dist) {
                     cur_batch.dist.clear();
                 }
-            } else {
-                auto& cur_batch = prefix_batches[cur_batch_id];
-                trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
-                std::tie(loss,num_predictions) = build_train_graph_prefix(lm,cg,cur_batch,drop_out);
-
-                loss_float = dynet::as_scalar(cg.forward(loss));
-                cg.backward(loss);
-                trainer.update();
             }
 
             auto instance_loss = loss_float / num_predictions;
