@@ -49,6 +49,7 @@ using one_hot_batches_t = std::vector<one_hot_batch_t>;
 prefix_batches_t
 create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus,size_t batch_size)
 {
+    cstnn_timer timer("create_prefix_batches");
     prefix_batches_t prefix_batches;
     std::sort(all_prefixes.begin(),all_prefixes.end());
     auto prefix_itr = all_prefixes.begin();
@@ -94,6 +95,7 @@ create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus
 one_hot_batches_t
 create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& corpus,size_t batch_size)
 {
+    cstnn_timer timer("create_sentence_batches");
     one_hot_batches_t sent_batches;
     std::sort(all_sentences.begin(),all_sentences.end());
     auto s_itr = all_sentences.begin();

@@ -6,6 +6,7 @@
 #include "constants.hpp"
 #include "data_loader.hpp"
 #include "logging.hpp"
+#include "util.hpp"
 
 #include <boost/filesystem.hpp>
 
@@ -21,6 +22,7 @@ std::string CST_FILE = "cst.sdsl";
 
 cst_type build_or_load_cst(const corpus_t& corpus, args_t& args)
 {
+    cstnn_timer timer("build_or_load_cst");
     auto cst_file = args["path"].as<std::string>() + "/" + constants::CST_FILE;
     cst_type cst;
     if (boost::filesystem::exists(cst_file)) {
@@ -84,6 +86,7 @@ add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type nod
 std::vector<prefix_t>
 find_all_prefixes(const cst_type& cst,const corpus_t& corpus)
 {
+    cstnn_timer timer("find_all_prefixes");
     std::vector<prefix_t> prefixes;
     auto lb = cst.csa.C[corpus.vocab.start_sent_tok];
     auto rb = cst.csa.C[corpus.vocab.start_sent_tok + 1] - 1;
@@ -125,6 +128,7 @@ add_sentence(std::vector<sentence_t>& sentences,prefix_t& p,size_t tok,const cst
 std::vector<sentence_t>
 find_all_sentences(std::vector<prefix_t>& all_prefixes,const cst_type& cst,const corpus_t& corpus)
 {
+    cstnn_timer timer("find_all_sentences");
     std::vector<sentence_t> sentences;
 
     for(auto& prefix : all_prefixes) {
