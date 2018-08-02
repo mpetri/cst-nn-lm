@@ -168,7 +168,7 @@ build_train_graph_prefix(language_model& lm,dynet::ComputationGraph& cg,prefix_b
     dynet::Expression i_pred_linear = dynet::reshape(i_pred, { (unsigned int)batch.dist.size() });
     dynet::Expression i_true = dynet::input(cg, { (unsigned int)batch.dist.size() }, batch.dist );
     dynet::Expression i_error = dynet::transpose(i_true) * i_pred_linear;
-    return std::make_tuple(i_error,batch.size);
+    return std::make_tuple(i_error,batch.num_predictions);
 }
 
 std::tuple<dynet::Expression,size_t>
@@ -192,6 +192,7 @@ build_train_graph_sents(language_model& lm,dynet::ComputationGraph& cg,one_hot_b
     for (size_t i = 0; i < batch.suffix.size()-1; ++i) {
         auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
         auto i_err = dynet::pickneglogsoftmax(i_r_t, batch.suffix[i]);
+        num_predictions += batch.size;
         errs.push_back(i_err);
         auto i_x_t = dynet::lookup(cg, lm.p_c, batch.suffix[i]);
         i_y_t = lm.rnn.add_input(i_x_t);
@@ -199,7 +200,8 @@ build_train_graph_sents(language_model& lm,dynet::ComputationGraph& cg,one_hot_b
     auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
     auto i_err = dynet::pickneglogsoftmax(i_r_t, batch.suffix.back());
     errs.push_back(i_err);
-    return std::make_pair(dynet::sum_batches(dynet::sum(errs)),batch.num_predictions);
+    num_predictions += batch.size;
+    return std::make_pair(dynet::sum_batches(dynet::sum(errs)),num_predictions);
 }
 
 void compute_dist(prefix_batch_t& pb,const cst_type& cst,const corpus_t& corpus) {
