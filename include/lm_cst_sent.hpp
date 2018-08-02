@@ -47,7 +47,7 @@ create_train_batches(const cst_type& cst,const corpus_t& corpus, args_t& args)
     auto lb = cst.csa.C[corpus.vocab.start_sent_tok];
     auto rb = cst.csa.C[corpus.vocab.start_sent_tok + 1] - 1;
     auto start_node = cst.node(lb,rb); // cst node of <s>
-    
+
 
 
     return std::make_tuple(prefix_batches,one_hot_batches);
@@ -120,7 +120,6 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
 
     CNLOG << "start training cst sentence lm";
     CNLOG << "\tepochs = " << num_epochs;
-    CNLOG << "\tepoch_size = " << num_epochs;
     CNLOG << "\tbatch_size = " << batch_size;
     CNLOG << "\tdrop_out = " << drop_out;
     auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
@@ -152,6 +151,7 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
 
             dynet::Expression loss;
             size_t num_predictions;
+            dynet::ComputationGraph cg;
             if(cur_batch_id >= prefix_batches.size()) {
                 auto& cur_batch = one_hot_batches[cur_batch_id-prefix_batches.size()];
                 std::tie(loss,num_predictions) = build_train_graph_sents(lm,cg,cur_batch,drop_out);
@@ -166,7 +166,7 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
             trainer.update();
 
             auto train_stop = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> train_diff = train_end - train_start;
+            std::chrono::duration<double> train_diff = train_stop - train_start;
             auto time_per_instance = train_diff.count() / num_predictions * 1000.0;
 
             if ( (i-last_report) > report_interval || i+1 == batch_ids.size()) {
@@ -181,9 +181,8 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
         }
 
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
-        auto pplx = evaluate_pplx(lm, corpus.vocab, dev_corpus_file);
+        auto pplx = evaluate_pplx(lm, corpus, dev_corpus_file);
         CNLOG << "epoch " << epoch << " dev pplx = " << pplx;
     }
 
-    return lm;
 }

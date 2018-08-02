@@ -64,11 +64,11 @@ int main(int argc, char** argv)
     CNLOG << "parse arguments";
     auto args = parse_args(argc, argv);
 
-    auto lm_type = args["type"].as<std::string>();
-    language_model lm(corpus.vocab,args);
-
     CNLOG << "load and parse data";
     auto corpus = data_loader::load(args);
+
+    auto lm_type = args["type"].as<std::string>();
+    language_model lm(corpus.vocab,args);
 
     if( args.count("load") ) {
         auto lm_file_path = args["load"].as<std::string>();
