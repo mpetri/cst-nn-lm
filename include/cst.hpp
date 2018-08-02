@@ -137,10 +137,12 @@ find_all_sentences(std::vector<prefix_t>& all_prefixes,const cst_type& cst,const
     std::vector<sentence_t> sentences;
 
     for(auto& prefix : all_prefixes) {
-        for(size_t i = 0;i<prefix.dist.size();i++) {
-            if(prefix.dist[i] == 1) {
-                // leaf child
-                add_sentence(sentences,prefix,i,cst,corpus);
+        auto node_depth = cst.depth(prefix.node);
+        for (const auto& child : cst.children(prefix.node)) {
+            size_t size = cst.size(child);
+            if(size == 1) {
+                auto tok = cst.edge(child, node_depth + 1);
+                add_sentence(sentences,prefix,tok,cst,corpus);
             }
         }
     }
