@@ -113,7 +113,6 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
 
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
-    auto epoch_size = args["epoch_size"].as<size_t>();
     auto drop_out = args["drop_out"].as<double>();
     int64_t report_interval = args["report_interval"].as<size_t>();
 
