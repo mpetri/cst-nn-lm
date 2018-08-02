@@ -76,8 +76,6 @@ add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type nod
         prefix_t p;
         p.node = node;
         p.prefix = edge_label(cst,node);
-        p.dist.resize(corpus.vocab.size());
-
         prefixes.push_back(p);
     }
 }
