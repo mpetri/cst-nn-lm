@@ -41,6 +41,10 @@ struct prefix_t {
     bool operator<(const prefix_t& other) const {
         return prefix.size() < other.prefix.size();
     }
+
+    size_t size_in_bytes() const {
+        return prefix.size()*sizeof(uint32_t) + dist.size()*sizeof(float)+sizeof(cst_node_type);
+    }
 };
 
 struct sentence_t {
@@ -102,6 +106,12 @@ find_all_prefixes(const cst_type& cst,const corpus_t& corpus)
         }
         ++cst_itr;
     }
+    CNLOG << "found prefixes = " << prefixes.size();
+    size_t space_bytes = 0;
+    for(auto& p : prefixes) {
+        space_bytes += p.size_in_bytes();
+    }
+    CNLOG << "prefixes storage space = " << space_bytes / (1024*1024) << "MiB";
     return prefixes;
 }
 
