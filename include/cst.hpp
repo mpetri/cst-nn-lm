@@ -45,7 +45,7 @@ struct sentence_t {
     cst_node_type node;
     std::vector<uint32_t> prefix;
     std::vector<uint32_t> suffix;
-    bool operator<(const prefix_t& other) const {
+    bool operator<(const sentence_t& other) const {
         if(prefix.size() == other.prefix.size()) {
             return suffix.size() < other.suffix.size();
         }
@@ -54,7 +54,7 @@ struct sentence_t {
 };
 
 std::vector<uint32_t>
-edge_label(nst cst_type& cst,cst_node_type node)
+edge_label(const cst_type& cst,cst_node_type node)
 {
     std::vector<uint32_t> label;
     auto node_depth = cst.depth(node);
