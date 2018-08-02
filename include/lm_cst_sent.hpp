@@ -299,7 +299,7 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
             std::chrono::duration<double> train_diff = train_stop - train_start;
             auto time_per_instance = train_diff.count() / num_predictions * 1000.0;
 
-            if ( int64_t(i-last_report) > report_interval || i+1 == batch_ids.size()) {
+            if ( int64_t(i-last_report) >= report_interval || i+1 == batch_ids.size()) {
                 double percent = double(i) / double(batch_ids.size()) * 100;
                 last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
