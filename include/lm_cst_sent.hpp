@@ -24,25 +24,25 @@ using cst_node_type = typename cst_type::node_type;
 
 struct prefix_batch_t {
     size_t prefix_len;
-    size_t batch_size;
-    std::vector<std::vector<uint32_t> prefix;
+    size_t size;
+    std::vector<std::vector<uint32_t>>> prefix;
     std::vector<float> dist;
 };
 
 struct one_hot_batch_t {
     size_t processed_prefix_len = 0;
-    size_t batch_size;
+    size_t size;
     std::vector<std::vector<uint32_t>> sentence;
 };
 
 using prefix_batches_t = std::vector<prefix_batch_t>;
-using one_hot_batch_t = std::vector<one_hot_batch_t>;
+using one_hot_batches_t = std::vector<one_hot_batch_t>;
 
-std::tuple<prefix_batches_t,one_hot_batch_t>
+std::tuple<prefix_batches_t,one_hot_batches_t>
 create_train_batches(const cst_type& cst,const corpus_t& corpus, args_t& args)
 {
     prefix_batches_t prefix_batches;
-    one_hot_batch_t one_hot_batches;
+    one_hot_batches_t one_hot_batches;
 
     auto lb = cst.csa.C[corpus.vocab.start_sent_tok];
     auto rb = cst.csa.C[corpus.vocab.start_sent_tok + 1] - 1;
@@ -53,7 +53,6 @@ create_train_batches(const cst_type& cst,const corpus_t& corpus, args_t& args)
     return std::make_tuple(prefix_batches,one_hot_batches);
 }
 
-template <class t_itr>
 std::tuple<dynet::Expression, size_t> 
 build_train_graph_prefix(language_model& lm,dynet::ComputationGraph& cg,prefix_batch_t& batch,double drop_out)
 {
@@ -65,10 +64,10 @@ build_train_graph_prefix(language_model& lm,dynet::ComputationGraph& cg,prefix_b
     lm.i_R = dynet::parameter(cg, lm.p_R);
     lm.i_bias = dynet::parameter(cg, lm.p_bias);
     for (size_t i = 0; i < batch.prefix.size()-1; ++i) {
-        dynet::Expression i_x_t = dynet::lookup(cg, p_c, batch.prefix[i]);
+        dynet::Expression i_x_t = dynet::lookup(cg, lm.p_c, batch.prefix[i]);
         lm.rnn.add_input(i_x_t);
     }
-    last_toks = batch.prefix.back();
+    auto last_toks = batch.prefix.back();
     dynet::Expression i_x_t = dynet::lookup(cg, lm.p_c, last_toks);
     dynet::Expression i_y_t = lm.rnn.add_input(i_x_t);
     dynet::Expression i_r_t = lm.i_bias + lm.i_R * i_y_t;
@@ -77,7 +76,7 @@ build_train_graph_prefix(language_model& lm,dynet::ComputationGraph& cg,prefix_b
     dynet::Expression i_pred_linear = dynet::reshape(i_pred, { (unsigned int)batch.dist.size() });
     dynet::Expression i_true = dynet::input(cg, { (unsigned int)batch.dist.size() }, batch.dist );
     dynet::Expression i_error = dynet::transpose(i_true) * i_pred_linear;
-    return i_error;
+    return std::make_tuple(i_error,batch.size);
 }
 
 std::tuple<dynet::Expression,size_t>
@@ -101,7 +100,7 @@ build_train_graph_sents(language_model& lm,dynet::ComputationGraph& cg,one_hot_b
             auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
             auto i_err = dynet::pickneglogsoftmax(i_r_t, next_tok);
             errs.push_back(i_err);
-            num_predictions += batch_size;
+            num_predictions += batch.size;
         }
     }
     return std::make_pair(dynet::sum_batches(dynet::sum(errs)),num_predictions);

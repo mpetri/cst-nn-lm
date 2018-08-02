@@ -51,7 +51,7 @@ struct language_model {
 
     void load(std::string file_name) {
         dynet::TextFileLoader l(file_name);
-        l.populate(m);
+        l.populate(model);
     }
 };
 
