@@ -270,6 +270,7 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
             size_t num_predictions;
             dynet::ComputationGraph cg;
             float loss_float;
+            std::string batch_type = "S";
             if(cur_batch_id >= prefix_batches.size()) {
                 auto& cur_batch = one_hot_batches[cur_batch_id-prefix_batches.size()];
                 trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
@@ -278,6 +279,7 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
                 cg.backward(loss);
                 trainer.update();
             } else {
+                batch_type = "P";
                 auto& cur_batch = prefix_batches[cur_batch_id];
                 compute_dist(cur_batch,cst,corpus);
 
@@ -303,6 +305,7 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
                 last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << (i+1) << "/" << batch_ids.size()
+                      << " batch_type = " << batch_type
                       << " batch_size = " << num_predictions
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " ppl = " << exp(instance_loss);
