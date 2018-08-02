@@ -35,6 +35,24 @@ struct one_hot_batch_t {
     std::vector<std::vector<uint32_t>> sentence;
 };
 
+using prefix_batches_t = std::vector<prefix_batch_t>;
+using one_hot_batch_t = std::vector<one_hot_batch_t>;
+
+std::tuple<prefix_batches_t,one_hot_batch_t>
+create_train_batches(const cst_type& cst,const corpus_t& corpus, args_t& args)
+{
+    prefix_batches_t prefix_batches;
+    one_hot_batch_t one_hot_batches;
+
+    auto lb = cst.csa.C[corpus.vocab.start_sent_tok];
+    auto rb = cst.csa.C[corpus.vocab.start_sent_tok + 1] - 1;
+    auto start_node = cst.node(lb,rb); // cst node of <s>
+    
+
+
+    return std::make_tuple(prefix_batches,one_hot_batches);
+}
+
 template <class t_itr>
 std::tuple<dynet::Expression, size_t> 
 build_train_graph_prefix(language_model& lm,dynet::ComputationGraph& cg,prefix_batch_t& batch,double drop_out)

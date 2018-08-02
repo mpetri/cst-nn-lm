@@ -4,13 +4,12 @@
 #include <boost/program_options.hpp>
 
 #include "constants.hpp"
-#include "cst.hpp"
 #include "data_loader.hpp"
 
 #include "logging.hpp"
 
 #include "lm_dynet.hpp"
-// #include "lm_cst_sent.hpp"
+#include "lm_cst_sent.hpp"
 
 namespace po = boost::program_options;
 
@@ -81,7 +80,7 @@ int main(int argc, char** argv)
         if(lm_type == "standard") {
             train_dynet_lm(lm,corpus, args);
         } else if(lm_type == "cst_sent") {
-            // train_cst_sent(lm,corpus, args);
+            train_cst_sent(lm,corpus, args);
         } else if(lm_type == "cst_sample") {
             // train_cst_lm(lm,corpus, args);
         } else {

@@ -9,6 +9,7 @@
 #include "dynet/rnn.h"
 #include "dynet/timing.h"
 #include "dynet/training.h"
+#include <dynet/io.h>
 
 struct language_model {
     dynet::ParameterCollection model;
