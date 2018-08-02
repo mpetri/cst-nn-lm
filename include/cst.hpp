@@ -79,7 +79,7 @@ add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type nod
             double size = cst.size(child);
             p.dist[tok] = size;
         }
-        prefixes.push_back(p);
+        prefixes.emplace_back(std::move(p));
     }
 }
 

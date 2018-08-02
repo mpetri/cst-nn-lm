@@ -111,6 +111,7 @@ struct vocab_t {
     {
         return tok2int.size();
     }
+
     std::string print_sentence(std::vector<uint32_t>& sent) const {
         std::string s = "<";
         for(size_t i=0;i<sent.size();i++) {
@@ -145,6 +146,14 @@ struct data_loader {
     {
         auto path = args["path"].as<std::string>();
         auto train_file = path + "/" + constants::TRAIN_FILE;
+        auto vocab_file = path + "/" + constants::VOCAB_FILE;
+
+        if (boost::filesystem::exists(vocab_file)) {
+            vocab_t v;
+            v.load(vocab_file);
+            return v;
+        }
+
         auto threshold = args["vocab_size"].as<uint32_t>();
         CNLOG << "\tcreate vocabulary with threshold = " << threshold << " from " << train_file;
         vocab_t v;
@@ -159,6 +168,7 @@ struct data_loader {
                 v.add_token(tok);
         }
         v.freeze();
+        v.store(vocab_file);
         return v;
     }
 
