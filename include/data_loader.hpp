@@ -263,7 +263,7 @@ struct data_loader {
         auto vocab_threshold = args["vocab_size"].as<uint32_t>();
         auto directory = args["path"].as<std::string>();
         auto train_file = directory + "/" + constants::TRAIN_FILE;
-        auto parsed_file = directory + "/" + constants::PARSED_TRAIN_FILE + "-" + std::to_string(threshold);
+        auto parsed_file = directory + "/" + constants::PARSED_TRAIN_FILE + "-" + std::to_string(vocab_threshold);
 
         corpus_t c;
         c.file = train_file;
