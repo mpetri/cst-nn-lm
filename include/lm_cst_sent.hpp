@@ -20,7 +20,17 @@
 #include "data_loader.hpp"
 #include "logging.hpp"
 
-using cst_node_type = typename cst_type::node_type;
+
+
+struct prefix_instance_t {
+    std::vector<uint32_t> prefix;
+    std::vector<float> dist;
+}
+
+struct one_hot_instance_t {
+    std::vector<uint32_t> sentence;
+    size_t non_one_hot_prefix_len = 0;
+};
 
 struct prefix_batch_t {
     size_t prefix_len;
@@ -30,27 +40,120 @@ struct prefix_batch_t {
 };
 
 struct one_hot_batch_t {
-    size_t processed_prefix_len = 0;
     size_t size;
-    std::vector<std::vector<uint32_t>> sentence;
+    std::vector<std::vector<uint32_t>> prefix;
+    std::vector<std::vector<uint32_t>> suffix;
 };
 
 using prefix_batches_t = std::vector<prefix_batch_t>;
 using one_hot_batches_t = std::vector<one_hot_batch_t>;
 
-std::tuple<prefix_batches_t,one_hot_batches_t>
-create_train_batches(const cst_type& cst,const corpus_t& corpus, args_t& args)
+prefix_batches_t
+create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus)
 {
     prefix_batches_t prefix_batches;
-    one_hot_batches_t one_hot_batches;
+    std::sort(all_prefixes.begin(),all_prefixes.end());
+    auto prefix_itr = all_prefixes.begin();
+    auto prefix_end= all_prefixes.end();
+    size_t left = all_prefixes.size();
+    while(prefix_itr != prefix_end) {
+        auto batch_start = prefix_itr;
+        auto batch_end = batch_start;
+        if(left < batch_size) {
+            batch_end = batch_start + left;
+        } else {
+            batch_end = batch_start + batch_size;
+        }
 
-    auto lb = cst.csa.C[corpus.vocab.start_sent_tok];
-    auto rb = cst.csa.C[corpus.vocab.start_sent_tok + 1] - 1;
-    auto start_node = cst.node(lb,rb); // cst node of <s>
+        auto tmp = batch_end - 1;
+        while( tmp->prefix.size() != batch_start->prefix.size()) {
+            --tmp;
+        }
+        batch_end = tmp + 1;
 
+        prefix_batch_t pb;
+        pb.prefix_len = batch_start->prefix.size();
+        pb.size = std::distance(batch_start,batch_end);
+        pb.prefix.resize(prefix_len);
+        pb.dist.reserve(pb.size*corpus.vocab.size());
+        for(size_t i=0;i<prefix_len;i++) {
+            for(size_t j=0;j<pb.size;j++) {
+                auto& cp = *(batch_start + j).prefix;
+                pb.prefix[i].push_back(cp[i]);
+            }
+        }
+        for(size_t j=0;j<pb.size;j++) {
+            auto& cpd = *(batch_start + j).dist;
+            std::copy(cpd.begin(),cpd.end(),std::back_inserter(pb.dist));
+        }
+        prefix_batches.emplace_back(std::move(pb));
+        prefix_itr += pb.size;
+        left -= pb.size;
+    }
+    return prefix_batches;
+}
 
+one_hot_batches_t
+create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& corpus)
+{
+    one_hot_batches_t sent_batches;
+    std::sort(all_sentences.begin(),all_sentences.end());
+    auto s_itr = all_sentences.begin();
+    auto s_end = all_sentences.end();
+    size_t left = all_sentences.size();
+    while(s_itr != s_end) {
+        auto batch_start = s_itr;
+        auto batch_end = s_end;
+        if(left < batch_size) {
+            batch_end = batch_start + left;
+        } else {
+            batch_end = batch_start + batch_size;
+        }
 
-    return std::make_tuple(prefix_batches,one_hot_batches);
+        auto tmp = batch_end - 1;
+        while( tmp->prefix.size() != batch_start->prefix.size()) {
+            --tmp;
+        }
+        while( tmp->suffix.size() != batch_start->suffix.size()) {
+            --tmp;
+        }
+        batch_end = tmp + 1;
+
+        one_hot_batch_t sb;
+        sb.size = std::distance(batch_start,batch_end);
+        sb.prefix.resize(batch_start->prefix.size());
+        sb.suffix.resize(batch_start->suffix.size());
+        pb.dist.reserve(pb.size*corpus.vocab.size());
+        for(size_t i=0;i<sb.prefix.size();i++) {
+            for(size_t j=0;j<pb.size;j++) {
+                auto& cp = *(batch_start + j).prefix;
+                pb.prefix[i].push_back(cp[i]);
+            }
+        }
+        for(size_t i=0;i<sb.suffix.size();i++) {
+            for(size_t j=0;j<pb.size;j++) {
+                auto& cs = *(batch_start + j).suffix;
+                pb.suffix[i].push_back(cs[i]);
+            }
+        }
+        sent_batches.emplace_back(std::move(sb));
+        s_itr += sb.size;
+        left -= sb.size;
+    }
+
+    return sent_batches;
+}
+
+std::tuple<prefix_batches_t,one_hot_batches_t>
+create_train_batches(const cst_type& cst,const corpus_t& corpus, args_t& args,size_t batch_size)
+{
+    auto all_prefixes = find_all_prefixes(cst,corpus);
+    auto all_sentences = find_all_sentences(all_prefixes,cst,corpus);
+
+    auto prefix_batches = create_prefix_batches(all_prefixes,corpus);
+    auto sent_batches = create_sentence_batches(all_sentences,corpus);
+
+    return std::make_tuple(prefix_batches,sent_batches);
 }
 
 std::tuple<dynet::Expression, size_t> 
@@ -91,18 +194,24 @@ build_train_graph_sents(language_model& lm,dynet::ComputationGraph& cg,one_hot_b
     lm.i_R = dynet::parameter(cg, lm.p_R);
     lm.i_bias = dynet::parameter(cg, lm.p_bias);
     std::vector<Expression> errs;
-    for (size_t i = 0; i < batch.sentence.size() - 1; ++i) {
-        auto& cur_tok = batch.sentence[i];
+    dynet::Expression i_y_t;
+    for (size_t i = 0; i < batch.prefix.size(); ++i) {
+        auto& cur_tok = batch.prefix[i];
         auto i_x_t = dynet::lookup(cg, lm.p_c, cur_tok);
-        auto i_y_t = lm.rnn.add_input(i_x_t);
-        if(i >= batch.processed_prefix_len) {
-            auto& next_tok = batch.sentence[i+1];
-            auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
-            auto i_err = dynet::pickneglogsoftmax(i_r_t, next_tok);
-            errs.push_back(i_err);
-            num_predictions += batch.size;
-        }
+        i_y_t = lm.rnn.add_input(i_x_t);
     }
+    for (size_t i = 0; i < batch.suffix.size()-1; ++i) {
+        auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
+        auto i_err = dynet::pickneglogsoftmax(i_r_t, batch.suffix[i]);
+        num_predictions += batch.size;
+        errs.push_back(i_err);
+        i_x_t = dynet::lookup(cg, lm.p_c, batch.suffix[i]);
+        i_y_t = lm.rnn.add_input(i_x_t);
+    }
+    auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
+    auto i_err = dynet::pickneglogsoftmax(i_r_t, batch.suffix.back());
+    errs.push_back(i_err);
+    num_predictions += batch.size;
     return std::make_pair(dynet::sum_batches(dynet::sum(errs)),num_predictions);
 }
 
@@ -127,13 +236,12 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
     std::vector<prefix_batch_t> prefix_batches;
     std::vector<one_hot_batch_t> one_hot_batches;
     auto prep_start = std::chrono::high_resolution_clock::now();
-    std::tie(prefix_batches,one_hot_batches) = create_train_batches(cst,corpus,args);
+    std::tie(prefix_batches,one_hot_batches) = create_train_batches(cst,corpus,args,batch_size);
     auto prep_end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> prep_diff = prep_end - prep_start;
     CNLOG << "created batches in " << " - " << prep_diff.count() << "s";
 
     dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
-    trainer.clip_threshold = trainer.clip_threshold * batch_size;
     std::mt19937 rng(constants::RAND_SEED);
     std::vector<uint32_t> batch_ids(prefix_batches.size()+one_hot_batches.size());
     for(size_t i=0;i<batch_ids.size();i++) batch_ids[i] = i;
@@ -146,15 +254,17 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
         for(size_t i=0;i<batch_ids.size();i++) {
             auto train_start = std::chrono::high_resolution_clock::now();
             auto cur_batch_id = batch_ids[i];
-
+            
             dynet::Expression loss;
             size_t num_predictions;
             dynet::ComputationGraph cg;
             if(cur_batch_id >= prefix_batches.size()) {
                 auto& cur_batch = one_hot_batches[cur_batch_id-prefix_batches.size()];
+                trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
                 std::tie(loss,num_predictions) = build_train_graph_sents(lm,cg,cur_batch,drop_out);
             } else {
                 auto& cur_batch = prefix_batches[cur_batch_id];
+                trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
                 std::tie(loss,num_predictions) = build_train_graph_prefix(lm,cg,cur_batch,drop_out);
             }
 
@@ -167,7 +277,7 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
             std::chrono::duration<double> train_diff = train_stop - train_start;
             auto time_per_instance = train_diff.count() / num_predictions * 1000.0;
 
-            if ( (i-last_report) > report_interval || i+1 == batch_ids.size()) {
+            if ( int64_t(i-last_report) > report_interval || i+1 == batch_ids.size()) {
                 double percent = double(i) / double(batch_ids.size()) * 100;
                 last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
