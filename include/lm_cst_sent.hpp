@@ -22,88 +22,72 @@
 
 using cst_node_type = typename cst_type::node_type;
 
-struct instance_t {
-    std::vector<uint32_t> sentence;
-    size_t one_hot_start = 0;
-    size_t padding = 0;
-    size_t real_len = 0;
-    size_t rand = 0;
-    bool operator<(const instance_t& other) const
-    {
-        if (real_len == other.real_len) {
-            return rand < other.rand;
-        }
-        return real_len < other.real_len;
-    }
-    template <class t_itr>
-    instance_t(t_itr& itr, size_t len)
-    {
-        for (size_t i = 0; i < len; i++) {
-            sentence.push_back(*itr++);
-        }
-        real_len = len;
-    }
+struct prefix_batch_t {
+    size_t prefix_len;
+    size_t batch_size;
+    std::vector<std::vector<uint32_t> prefix;
+    std::vector<float> dist;
+};
+
+struct one_hot_batch_t {
+    size_t processed_prefix_len = 0;
+    size_t batch_size;
+    std::vector<std::vector<uint32_t>> sentence;
 };
 
 template <class t_itr>
 std::tuple<dynet::Expression, size_t> 
-build_train_graph_prefix(language_model& lm,dynet::ComputationGraph& cg, t_itr& start, t_itr& end,double drop_out)
+build_train_graph_prefix(language_model& lm,dynet::ComputationGraph& cg,prefix_batch_t& batch,double drop_out)
 {
-
-}
-
-
-template <class t_itr>
-std::tuple<dynet::Expression, size_t> 
-build_train_graph_regular(language_model& lm,dynet::ComputationGraph& cg, t_itr& start, t_itr& end,double drop_out)
-{
-    size_t batch_size = std::distance(start, end);
-    size_t sentence_len = start->sentence.size();
-
     lm.rnn.new_graph(cg);
     lm.rnn.start_new_sequence();
     if(drop_out != 0.0) {
         lm.rnn.set_dropout(drop_out);
     }
-
     lm.i_R = dynet::parameter(cg, lm.p_R);
     lm.i_bias = dynet::parameter(cg, lm.p_bias);
-
-    std::vector<Expression> errs;
-    // Set all inputs to the SOS symbol
-    auto sos_tok = start->sentence.front();
-    std::vector<uint32_t> current_tok(batch_size, sos_tok);
-    std::vector<uint32_t> next_tok(batch_size);
-
-    // Run rnn on batch
-    size_t actual_predictions = 0;
-    for (size_t j = 0; j < batch_size; j++) {
-        auto instance = start + j;
-        actual_predictions += (instance->real_len - 1);
+    for (size_t i = 0; i < batch.prefix.size()-1; ++i) {
+        dynet::Expression i_x_t = dynet::lookup(cg, p_c, batch.prefix[i]);
+        lm.rnn.add_input(i_x_t);
     }
+    last_toks = batch.prefix.back();
+    dynet::Expression i_x_t = dynet::lookup(cg, lm.p_c, last_toks);
+    dynet::Expression i_y_t = lm.rnn.add_input(i_x_t);
+    dynet::Expression i_r_t = lm.i_bias + lm.i_R * i_y_t;
 
-    for (size_t i = 0; i < sentence_len - 1; ++i) {
-        for (size_t j = 0; j < batch_size; j++) {
-            auto instance = start + j;
-            next_tok[j] = instance->sentence[i+1];
-        }
-
-        // Embed the current tokens
-        auto i_x_t = dynet::lookup(cg, lm.p_c, current_tok);
-        // Run one step of the rnn : y_t = RNN(x_t)
-        auto i_y_t = lm.rnn.add_input(i_x_t);
-        // Project to the token space using an affine transform
-        auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
-        // Compute error for each member of the batch
-        auto i_err = dynet::pickneglogsoftmax(i_r_t, next_tok);
-        errs.push_back(i_err);
-        // Change input
-        current_tok = next_tok;
-    }
-    // Add all errors
-    return std::make_tuple(sum_batches(sum(errs)), actual_predictions);
+    dynet::Expression i_pred = -dynet::log_softmax(i_r_t);
+    dynet::Expression i_pred_linear = dynet::reshape(i_pred, { (unsigned int)batch.dist.size() });
+    dynet::Expression i_true = dynet::input(cg, { (unsigned int)batch.dist.size() }, batch.dist );
+    dynet::Expression i_error = dynet::transpose(i_true) * i_pred_linear;
+    return i_error;
 }
 
+std::tuple<dynet::Expression,size_t>
+build_train_graph_sents(language_model& lm,dynet::ComputationGraph& cg,one_hot_batch_t& batch,double drop_out)
+{
+    size_t num_predictions = 0;
+    lm.rnn.new_graph(cg);
+    lm.rnn.start_new_sequence();
+    if(drop_out != 0.0) {
+        lm.rnn.set_dropout(drop_out);
+    }
+    lm.i_R = dynet::parameter(cg, lm.p_R);
+    lm.i_bias = dynet::parameter(cg, lm.p_bias);
+    std::vector<Expression> errs;
+    for (size_t i = 0; i < batch.sentence.size() - 1; ++i) {
+        auto& cur_tok = batch.sentence[i];
+        auto i_x_t = dynet::lookup(cg, lm.p_c, cur_tok);
+        auto i_y_t = lm.rnn.add_input(i_x_t);
+        if(i >= batch.processed_prefix_len) {
+            auto& next_tok = batch.sentence[i+1];
+            auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
+            auto i_err = dynet::pickneglogsoftmax(i_r_t, next_tok);
+            errs.push_back(i_err);
+            num_predictions += batch_size;
+        }
+    }
+    return std::make_pair(dynet::sum_batches(dynet::sum(errs)),num_predictions);
+}
 
 void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
 {
@@ -125,113 +109,62 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
 
     // (1) create the batches
     CNLOG << "create the batches. batch_size = " << batch_size;
-    std::vector<instance_t> sentences;
+    std::vector<prefix_batch_t> prefix_batches;
+    std::vector<one_hot_batch_t> one_hot_batches;
     auto prep_start = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < corpus.num_sentences; i++) {
-        auto start_sent = corpus.text.begin() + corpus.sent_starts[i];
-        size_t sent_len = corpus.sent_lens[i];
-        sentences.emplace_back(start_sent, sent_len);
-    }
+    std::tie(prefix_batches,one_hot_batches) = create_train_batches(cst,corpus,args);
     auto prep_end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> prep_diff = prep_end - prep_start;
     CNLOG << "created batches in " << " - " << prep_diff.count() << "s";
 
-    CNLOG << "create the prefix batches. batch_size = " << batch_size;
-    auto prefix_start = std::chrono::high_resolution_clock::now();
-    auto lb = cst.csa.C[corpus.vocab.start_sent_tok];
-    auto rb = cst.csa.C[corpus.vocab.start_sent_tok + 1] - 1;
-    auto start_node = cst.node(lb,rb); // cst node of <s>
-    prefixes = find_all_prefixes(cst,corpus,start_node);
-    auto prefix_end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> prefix_diff = prefix_end - prefix_start;
-    CNLOG << "created prefix batches in " << " - " << prefix_diff.count() << "s";
-
-    CNLOG << "number of sentences = " << sentences.size();
-    CNLOG << "number of prefixes = " << prefixes.size();
     dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
     trainer.clip_threshold = trainer.clip_threshold * batch_size;
-    std::mt19937 gen(constants::RAND_SEED);
-    std::uniform_int_distribution<> dis(0,100000000);
+    std::mt19937 rng(constants::RAND_SEED);
+    std::vector<uint32_t> batch_ids(prefix_batches.size()+one_hot_batches.size());
+    for(size_t i=0;i<batch_ids.size();i++) batch_ids[i] = i;
+
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
+        std::shuffle(batch_ids.begin(),batch_ids.end(), rng);
 
-        CNLOG << "shuffle instances";
-        // (0) remove existing padding if necessary
-	    size_t max_len = 0;
-        for (auto& instance : instances) {
-            instance.sentence.resize(instance.real_len);
-            instance.padding = 0;
-            instance.rand = dis(gen);
-        }
-        // (1) perform a random shuffle that respects sentence len
-        std::sort(instances.begin(), instances.end());
-
-        // (2) add padding to instances in the same batch if necessary
-        CNLOG << "add padding to instances in batch";
-        {
-            auto padd_sym = corpus.vocab.stop_sent_tok;
-            auto itr = instances.begin();
-            auto end = instances.end();
-            while (itr != end) {
-                auto batch_itr = itr;
-                auto batch_end = batch_itr + std::min(batch_size,size_t(std::distance(itr,end))) - 1;
-                while (batch_itr->sentence.size() != batch_end->sentence.size()) {
-                    size_t to_add = batch_end->sentence.size() - batch_itr->sentence.size();
-                    for (size_t i = 0; i < to_add; i++) {
-                        batch_itr->sentence.push_back(padd_sym);
-                        batch_itr->padding++;
-                    }
-                    ++batch_itr;
-                }
-                itr = batch_end + 1;
-            }
-        }
-
-        CNLOG << "start training...";
-        auto start = instances.begin();
-        auto last_report = instances.begin();
-        auto itr = instances.begin();
-        auto end = instances.end();
-        while (itr != end) {
-            auto batch_end = itr + std::min(batch_size,size_t(std::distance(itr,end)));
-            auto actual_batch_size = std::distance(itr,batch_end);
-
-            auto batch_loss_start = std::chrono::high_resolution_clock::now();
-            auto batch_losses = compute_batch_losses(cst,corpus,itr,batch_end);
-            auto batch_loss_end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double>  batch_loss_diff = batch_loss_end - batch_loss_start;
-            auto time_per_loss_instance = batch_loss_diff.count() / actual_batch_size * 1000.0;
-
-            dynet::ComputationGraph cg;
+        size_t last_report = 0;
+        for(size_t i=0;i<batch_ids.size();i++) {
             auto train_start = std::chrono::high_resolution_clock::now();
-            auto loss_tuple = build_train_graph_cst_sent(lm,cg, itr, batch_end,batch_losses,corpus,drop_out);
-            auto loss_expr = std::get<0>(loss_tuple);
-            auto num_predictions = std::get<1>(loss_tuple);
-            auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
-            auto instance_loss = loss_float / num_predictions;
-            cg.backward(loss_expr);
-            trainer.update();
-            itr = batch_end;
-            auto train_end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> train_diff = train_end - train_start;
-            auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
+            auto cur_batch_id = batch_ids[i];
 
-            if (std::distance(last_report, itr) > 32768 || batch_end == end) {
-                double percent = double(std::distance(start, itr)) / double(instances.size()) * 100;
-                last_report = itr;
+            dynet::Expression loss;
+            size_t num_predictions;
+            if(cur_batch_id >= prefix_batches.size()) {
+                auto& cur_batch = one_hot_batches[cur_batch_id-prefix_batches.size()];
+                std::tie(loss,num_predictions) = build_train_graph_sents(lm,cg,cur_batch,drop_out);
+            } else {
+                auto& cur_batch = prefix_batches[cur_batch_id];
+                std::tie(loss,num_predictions) = build_train_graph_prefix(lm,cg,cur_batch,drop_out);
+            }
+
+            auto loss_float = dynet::as_scalar(cg.forward(loss));
+            auto instance_loss = loss_float / num_predictions;
+            cg.backward(loss);
+            trainer.update();
+
+            auto train_stop = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> train_diff = train_end - train_start;
+            auto time_per_instance = train_diff.count() / num_predictions * 1000.0;
+
+            if ( (i-last_report) > report_interval || i+1 == batch_ids.size()) {
+                double percent = double(i) / double(batch_ids.size()) * 100;
+                last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
-                      << std::distance(start, itr) << "/" << instances.size()
-                      << " batch_size = " << actual_batch_size
-                      << " TIME[loss_comp] = " << time_per_loss_instance << "ms/instance" 
-                      << " TIME[nn] = " << time_per_instance << "ms/instance"
-                      << " num_predictions = " << num_predictions
+                      << (i+1) << "/" << batch_ids.size()
+                      << " batch_size = " << num_predictions
+                      << " TIME = "<< time_per_instance << "ms/instance"
                       << " ppl = " << exp(instance_loss);
             }
         }
-        CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
 
+        CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
         auto pplx = evaluate_pplx(lm, corpus.vocab, dev_corpus_file);
-        CNLOG << "epoch " << epoch MM << " dev pplx = " << pplx;
+        CNLOG << "epoch " << epoch << " dev pplx = " << pplx;
     }
 
     return lm;

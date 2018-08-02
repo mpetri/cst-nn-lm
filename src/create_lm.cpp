@@ -21,6 +21,8 @@ po::variables_map parse_args(int argc, char** argv)
     desc.add_options()
         ("help", "produce help message")
         ("path", po::value<std::string>()->required(), "data path")
+        ("load", po::value<std::string>(), "load model instead of constructing one")
+        ("store", po::value<std::string>(), "store model after construction")
         ("type", po::value<std::string>()->required(), "lm type")
         ("vocab_size", po::value<uint32_t>()->default_value(defaults::VOCAB_SIZE), "vocab size")
         ("layers", po::value<uint32_t>()->default_value(defaults::LAYERS), "layers of the rnn")
@@ -63,21 +65,35 @@ int main(int argc, char** argv)
     CNLOG << "parse arguments";
     auto args = parse_args(argc, argv);
 
+    auto lm_type = args["type"].as<std::string>();
+    language_model lm(corpus.vocab,args);
+
     CNLOG << "load and parse data";
     auto corpus = data_loader::load(args);
 
-    CNLOG << "create language model";
-    auto lm_type = args["type"].as<std::string>();
-    language_model lm(corpus.vocab,args);
-    if(lm_type == "standard") {
-        train_dynet_lm(lm,corpus, args);
-    } else if(lm_type == "cst_sent") {
-        // train_cst_sent(lm,corpus, args);
-    } else if(lm_type == "cst_sample") {
-        // train_cst_lm(lm,corpus, args);
+    if( args.count("load") ) {
+        auto lm_file_path = args["load"].as<std::string>();
+        CNLOG << "load language model from " << lm_file_path;
+        lm.load(lm_file_path);
     } else {
-        CNLOG << "ERROR: incorrect lm type. options are: standard, cst_sent, cst_sample";
-        exit(EXIT_FAILURE);
+        CNLOG << "create language model";
+
+        if(lm_type == "standard") {
+            train_dynet_lm(lm,corpus, args);
+        } else if(lm_type == "cst_sent") {
+            // train_cst_sent(lm,corpus, args);
+        } else if(lm_type == "cst_sample") {
+            // train_cst_lm(lm,corpus, args);
+        } else {
+            CNLOG << "ERROR: incorrect lm type. options are: standard, cst_sent, cst_sample";
+            exit(EXIT_FAILURE);
+        }
+
+        if( args.count("store") ) {
+            auto lm_file_path = args["store"].as<std::string>();
+            CNLOG << "store language model to " << lm_file_path;
+            lm.store(lm_file_path);
+        }
     }
 
     CNLOG << "test language model";

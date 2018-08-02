@@ -42,6 +42,16 @@ struct language_model {
         p_bias = model.add_parameters({ VOCAB_SIZE });
         rnn = dynet::LSTMBuilder(LAYERS, INPUT_DIM, HIDDEN_DIM, model);
     }
+
+    void store(std::string file_name) {
+        dynet::TextFileSaver s(file_name);
+        s.save(model);
+    }
+
+    void load(std::string file_name) {
+        dynet::TextFileLoader l(file_name);
+        l.populate(m);
+    }
 };
 
 
