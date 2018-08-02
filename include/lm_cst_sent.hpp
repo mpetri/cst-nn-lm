@@ -25,7 +25,7 @@ using cst_node_type = typename cst_type::node_type;
 struct prefix_batch_t {
     size_t prefix_len;
     size_t size;
-    std::vector<std::vector<uint32_t>>> prefix;
+    std::vector<std::vector<uint32_t>> prefix;
     std::vector<float> dist;
 };
 
