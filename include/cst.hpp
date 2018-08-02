@@ -18,7 +18,7 @@ namespace constants {
 std::string CST_FILE = "cst.sdsl";
 }
 
-cst_type build_or_load_cst(corpus_t& corpus, args_t& args)
+cst_type build_or_load_cst(const corpus_t& corpus, args_t& args)
 {
     auto cst_file = args["path"].as<std::string>() + "/" + constants::CST_FILE;
     cst_type cst;
