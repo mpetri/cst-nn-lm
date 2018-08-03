@@ -401,11 +401,11 @@ void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args
             std::chrono::duration<double> train_diff = train_stop - train_start;
             auto time_per_instance = train_diff.count() / num_predictions * 1000.0;
 
-            if ( int64_t(i-last_report) >= report_interval || i+1 == batch_ids.size()) {
-                double percent = double(i) / double(batch_ids.size()) * 100;
+            if ( int64_t(i-last_report) >= report_interval || i+1 == pbatch_ids.size()) {
+                double percent = double(i) / double(pbatch_ids.size()) * 100;
                 last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
-                      << (i+1) << "/" << batch_ids.size()
+                      << (i+1) << "/" << pbatch_ids.size()
                       << " batch_type = " << batch_type
                       << " batch_size = " << num_predictions
                       << " TIME = "<< time_per_instance << "ms/instance"
@@ -435,11 +435,11 @@ void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args
             std::chrono::duration<double> train_diff = train_stop - train_start;
             auto time_per_instance = train_diff.count() / num_predictions * 1000.0;
 
-            if ( int64_t(i-last_report) >= report_interval || i+1 == batch_ids.size()) {
-                double percent = double(i) / double(batch_ids.size()) * 100;
+            if ( int64_t(i-last_report) >= report_interval || i+1 == sbatch_ids.size()) {
+                double percent = double(i) / double(sbatch_ids.size()) * 100;
                 last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
-                      << (i+1) << "/" << batch_ids.size()
+                      << (i+1) << "/" << sbatch_ids.size()
                       << " batch_type = " << batch_type
                       << " batch_size = " << num_predictions
                       << " TIME = "<< time_per_instance << "ms/instance"
