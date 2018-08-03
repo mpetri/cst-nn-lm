@@ -81,10 +81,10 @@ int main(int argc, char** argv)
             train_dynet_lm(lm,corpus, args);
         } else if(lm_type == "cst_sent") {
             train_cst_sent(lm,corpus, args);
-        } else if(lm_type == "cst_sample") {
-            // train_cst_lm(lm,corpus, args);
+        } else if(lm_type == "cst_sent_pfirst") {
+            train_cst_sent_prefix_first(lm,corpus, args);
         } else {
-            CNLOG << "ERROR: incorrect lm type. options are: standard, cst_sent, cst_sample";
+            CNLOG << "ERROR: incorrect lm type. options are: standard, cst_sent, cst_sent_pfirst";
             exit(EXIT_FAILURE);
         }
 
