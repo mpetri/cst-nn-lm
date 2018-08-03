@@ -57,8 +57,11 @@ head -n 5000 ./news.2011/valid_and_test.txt > ./news.2011/valid.txt
 
 mkdir -p news.combined
 cat ./news.2007/raw.tok ./news.2008/raw.tok ./news.2009/raw.tok ./news.2010/raw.tok ./news.2011/raw.tok > news.combined/raw.tok
-sort -R ./news.combined/raw.tok > ./news.combined/raw.tok.shuffled
-head -n -10000 ./news.combined/raw.tok.shuffled > ./news.combined/train.txt
-tail -n 10000 ./news.combined/raw.tok.shuffled > ./news.combined/valid_and_test.txt
+sort --parallel=8 -u ./news.combined/raw.tok > ./news.combined/uniq.tok
+sort --parallel=8 -R ./news.combined/uniq.tok > ./news.combined/uniq.tok.shuffled
+head -n -10000 ./news.combined/uniq.tok.shuffled > ./news.combined/train.txt
+head -n 1M ./news.combined/uniq.tok.shuffled > ./news.combined/train_1M.txt
+head -n 3M ./news.combined/uniq.tok.shuffled > ./news.combined/train_3M.txt
+tail -n 10000 ./news.combined/uniq.tok.shuffled > ./news.combined/valid_and_test.txt
 tail -n 5000 ./news.combined/valid_and_test.txt > ./news.combined/test.txt
 head -n 5000 ./news.combined/valid_and_test.txt > ./news.combined/valid.txt
