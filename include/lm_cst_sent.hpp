@@ -31,7 +31,7 @@ struct prefix_batch_t {
 
     void print() {
         CNLOG << "===================================================";
-        CNLOG << "\tbatch_size = " << batch_size;
+        CNLOG << "\tbatch_size = " << size;
         CNLOG << "\tnum_predictions = " << num_predictions;
 
 
