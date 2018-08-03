@@ -32,16 +32,6 @@ struct prefix_batch_t {
     bool operator<(const prefix_batch_t& other) const {
         return prefix_len < other.prefix_len;
     }
-
-    void print() {
-        CNLOG << "===================================================";
-        CNLOG << "\tbatch_size = " << size;
-        CNLOG << "\tnum_predictions = " << num_predictions;
-
-
-
-        CNLOG << "===================================================";
-    }
 };
 
 struct one_hot_batch_t {
@@ -237,7 +227,7 @@ void compute_dist(prefix_batch_t& pb,const cst_type& cst,const corpus_t& corpus)
             }
         }
 
-        if(num_children > 100) {
+        if(num_children > 1000) {
             pb.keep_dist = true;
         }
     }
