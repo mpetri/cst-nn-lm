@@ -33,7 +33,6 @@ struct prefix_batch_t {
         CNLOG << "===================================================";
         CNLOG << "\tbatch_size = " << batch_size;
         CNLOG << "\tnum_predictions = " << num_predictions;
-        for(size_t )
 
 
 
@@ -229,7 +228,7 @@ void compute_dist(prefix_batch_t& pb,const cst_type& cst,const corpus_t& corpus)
                 double size = cst.size(child);
                 pb.num_predictions += size;
                 pb.dist[offset+tok] = size;
-                pb.num_children++;
+                num_children++;
             }
         }
 
