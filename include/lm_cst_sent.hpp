@@ -28,6 +28,17 @@ struct prefix_batch_t {
     std::vector<std::vector<uint32_t>> prefix;
     std::vector<cst_node_type> cst_nodes;
     std::vector<float> dist;
+
+    void print() {
+        CNLOG << "===================================================";
+        CNLOG << "\tbatch_size = " << batch_size;
+        CNLOG << "\tnum_predictions = " << num_predictions;
+        for(size_t )
+
+
+
+        CNLOG << "===================================================";
+    }
 };
 
 struct one_hot_batch_t {
@@ -208,6 +219,7 @@ void compute_dist(prefix_batch_t& pb,const cst_type& cst,const corpus_t& corpus)
     if(pb.dist.size() == 0) {
         pb.dist.resize(pb.size*corpus.vocab.size());
         pb.num_predictions = 0;
+        size_t num_children = 0;
         for(size_t i=0;i<pb.cst_nodes.size();i++) {
             auto offset = i * corpus.vocab.size();
             auto node = pb.cst_nodes[i];
@@ -215,12 +227,13 @@ void compute_dist(prefix_batch_t& pb,const cst_type& cst,const corpus_t& corpus)
             for (const auto& child : cst.children(node)) {
                 auto tok = cst.edge(child, node_depth + 1);
                 double size = cst.size(child);
+                pb.num_predictions += size;
                 pb.dist[offset+tok] = size;
-                pb.num_predictions++;
+                pb.num_children++;
             }
         }
 
-        if(pb.num_predictions > 100) {
+        if(num_children > 100) {
             pb.keep_dist = true;
         }
     }
