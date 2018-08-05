@@ -114,11 +114,6 @@ create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus
         }
     }
 
-    for(auto& b : prefix_batches) {
-        if(b.prefix.size() == 1) b.print(corpus);
-    }
-
-
     return prefix_batches;
 }
 
