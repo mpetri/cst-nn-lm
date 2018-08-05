@@ -111,7 +111,7 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
         while( tmp->prefix.size() != batch_start->prefix.size()) {
             --tmp;
         }
-        while( tmp->suffix.size()+5 > batch_start->suffix.size()) {
+        while( (tmp->suffix.size() - batch_start->suffix.size()) > 5) {
             --tmp;
         }
         batch_end = tmp + 1;
