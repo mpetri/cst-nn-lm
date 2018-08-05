@@ -32,6 +32,17 @@ struct prefix_batch_t {
     bool operator<(const prefix_batch_t& other) const {
         return prefix_len < other.prefix_len;
     }
+
+    void print(const corpus_t& c) {
+        std::cout << "PREFIX_BATCH ===================================" << std::endl;
+        for(size_t j=0;j<prefix[0].size();j++) {
+            for(size_t i=0;i<prefix.size();i++) {
+                std::cout << c.vocab.inverse_lookup(prefix[i][j]) << " ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "================================================" << std::endl;
+    }
 };
 
 struct one_hot_batch_t {
@@ -102,6 +113,12 @@ create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus
             CNLOG << "\tprefix size " << i << " - # " << batch_prefix_dist[i] << " (" << percent << "%)";
         }
     }
+
+    for(auto& b : prefix_batches) {
+        if(b.prefix.size() == 1) b.print();
+    }
+
+
     return prefix_batches;
 }
 
