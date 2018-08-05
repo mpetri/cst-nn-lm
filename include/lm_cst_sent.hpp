@@ -94,6 +94,14 @@ create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus
             CNLOG << "\tbatch size " << i << " - # " << batch_size_dist[i] << " (" << percent << "%)";
         }
     }
+    std::vector<uint32_t> batch_prefix_dist(20000);
+    for(auto& b : prefix_batches) batch_prefix_dist[b.size]++;
+    for(size_t i=0;i<batch_prefix_dist.size();i++) {
+        if(batch_prefix_dist[i] != 0) {
+            double percent = 100.0 * double(batch_prefix_dist[i]) / double(prefix_batches.size());
+            CNLOG << "\tprefix size " << i << " - # " << batch_prefix_dist[i] << " (" << percent << "%)";
+        }
+    }
     return prefix_batches;
 }
 
@@ -178,6 +186,22 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
         if(batch_size_dist[i] != 0) {
             double percent = 100.0 * double(batch_size_dist[i]) / double(sent_batches.size());
             CNLOG << "\tbatch size " << i << " - # " << batch_size_dist[i] << " (" << percent << "%)";
+        }
+    }
+    std::vector<uint32_t> batch_suffix_dist(20000);
+    for(auto& b : sent_batches) batch_suffix_dist[b.suffix.size()]++;
+    for(size_t i=0;i<batch_suffix_dist.size();i++) {
+        if(batch_suffix_dist[i] != 0) {
+            double percent = 100.0 * double(batch_suffix_dist[i]) / double(sent_batches.size());
+            CNLOG << "\tsuffix size " << i << " - # " << batch_suffix_dist[i] << " (" << percent << "%)";
+        }
+    }
+    std::vector<uint32_t> batch_prefix_dist(20000);
+    for(auto& b : sent_batches) batch_prefix_dist[b.suffix.size()]++;
+    for(size_t i=0;i<batch_prefix_dist.size();i++) {
+        if(batch_prefix_dist[i] != 0) {
+            double percent = 100.0 * double(batch_prefix_dist[i]) / double(sent_batches.size());
+            CNLOG << "\tprefix size " << i << " - # " << batch_prefix_dist[i] << " (" << percent << "%)";
         }
     }
     return sent_batches;
