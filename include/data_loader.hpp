@@ -40,6 +40,7 @@ struct vocab_t {
     uint32_t unk_tok;
     uint32_t start_sent_tok;
     uint32_t stop_sent_tok;
+    uint32_t padding_tok;
 
     vocab_t()
     {
@@ -47,6 +48,7 @@ struct vocab_t {
         stop_sent_tok = add_token("</s>");
         start_sent_tok = add_token("<s>");
         unk_tok = add_token("<unk>");
+        padding_tok = eof_tok;
     }
 
     void load(std::string file_name) {
@@ -92,6 +94,7 @@ struct vocab_t {
         stop_sent_tok = add_token("</s>");
         start_sent_tok = add_token("<s>");
         unk_tok = add_token("<unk>");
+        padding_tok = eof_tok;
         for (size_t i = 0; i < max_size; i++) {
             auto tok = tok_freqs[i].first;
             auto tok_str = int2tok[tok];

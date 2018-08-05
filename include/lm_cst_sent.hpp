@@ -111,10 +111,19 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
         while( tmp->prefix.size() != batch_start->prefix.size()) {
             --tmp;
         }
-        while( tmp->suffix.size() != batch_start->suffix.size()) {
+        while( tmp->suffix.size()+5 > batch_start->suffix.size()) {
             --tmp;
         }
         batch_end = tmp + 1;
+        auto batch_last = tmp;
+        auto last_suffix_size = batch_last->suffix.size();
+        tmp = batch_start;
+        while( tmp != batch_end ) {
+            while( tmp->suffix.size() != last_suffix_size) {
+                tmp->suffix.push_back( corpus.vocab.eof_tok );
+            }
+            ++tmp;
+        }
 
         one_hot_batch_t sb;
         sb.size = std::distance(batch_start,batch_end);
@@ -213,7 +222,6 @@ void compute_dist(prefix_batch_t& pb,const cst_type& cst,const corpus_t& corpus)
     if(pb.dist.size() == 0) {
         pb.dist.resize(pb.size*corpus.vocab.size());
         pb.num_predictions = 0;
-        size_t num_children = 0;
         for(size_t i=0;i<pb.cst_nodes.size();i++) {
             auto offset = i * corpus.vocab.size();
             auto node = pb.cst_nodes[i];
@@ -223,12 +231,7 @@ void compute_dist(prefix_batch_t& pb,const cst_type& cst,const corpus_t& corpus)
                 double size = cst.size(child);
                 pb.num_predictions += size;
                 pb.dist[offset+tok] = size;
-                num_children++;
             }
-        }
-
-        if(num_children > 1000) {
-            pb.keep_dist = true;
         }
     }
 }
@@ -278,10 +281,13 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
             dynet::ComputationGraph cg;
             float loss_float;
             std::string batch_type = "S";
+            std::string batch_size;
             if(cur_batch_id >= prefix_batches.size()) {
                 auto& cur_batch = one_hot_batches[cur_batch_id-prefix_batches.size()];
                 trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
                 std::tie(loss,num_predictions) = build_train_graph_sents(lm,cg,cur_batch,drop_out);
+                batch_size = "<" + std::to_string(num_predictions) + "," + std::to_string(cur_batch.size)
+                    + "," + std::to_string(cur_batch.prefix.size())  + "," + std::to_string(cur_batch.suffix.size()) + ">";
                 loss_float = dynet::as_scalar(cg.forward(loss));
                 cg.backward(loss);
                 trainer.update();
@@ -292,14 +298,13 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
 
                 trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
                 std::tie(loss,num_predictions) = build_train_graph_prefix(lm,cg,cur_batch,drop_out);
-
+                batch_size = "<" + std::to_string(num_predictions) + "," + std::to_string(cur_batch.size)
+                    + "," + std::to_string(cur_batch.prefix.size()) + ">";
                 loss_float = dynet::as_scalar(cg.forward(loss));
                 cg.backward(loss);
                 trainer.update();
-
-                if(!cur_batch.keep_dist) {
-                    cur_batch.dist.clear();
-                }
+                cur_batch.dist.clear();
+                cur_batch.dist.shrink_to_fit();
             }
 
             auto instance_loss = loss_float / num_predictions;
@@ -313,7 +318,7 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << (i+1) << "/" << batch_ids.size()
                       << " batch_type = " << batch_type
-                      << " batch_size = " << num_predictions
+                      << " batch_size = " << batch_size
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " ppl = " << exp(instance_loss);
             }
@@ -386,9 +391,8 @@ void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args
             cg.backward(loss);
             trainer.update();
 
-            if(!cur_batch.keep_dist) {
-                cur_batch.dist.clear();
-            }
+            cur_batch.dist.clear();
+            cur_batch.dist.shrink_to_fit();
 
             auto instance_loss = loss_float / num_predictions;
             auto train_stop = std::chrono::high_resolution_clock::now();
@@ -508,9 +512,8 @@ void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus,
             cg.backward(loss);
             trainer.update();
 
-            if(!cur_batch.keep_dist) {
-                cur_batch.dist.clear();
-            }
+            cur_batch.dist.clear();
+            cur_batch.dist.shrink_to_fit();
 
             auto instance_loss = loss_float / num_predictions;
             auto train_stop = std::chrono::high_resolution_clock::now();
