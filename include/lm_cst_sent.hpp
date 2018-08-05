@@ -119,14 +119,22 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
         auto last_suffix_size = batch_last->suffix.size();
         tmp = batch_start;
         while( tmp != batch_end ) {
+            auto before = tmp->suffix.size();
             while( tmp->suffix.size() != last_suffix_size) {
                 tmp->suffix.push_back( corpus.vocab.eof_tok );
             }
+            auto after = tmp->suffix.size();
+            CNLOG << "padd suffix by " << after-before;
             ++tmp;
         }
-
         one_hot_batch_t sb;
+
         sb.size = std::distance(batch_start,batch_end);
+
+        CNLOG << "batch size " << sb.size;
+        CNLOG << "prefix size " << batch_start->prefix.size();
+        CNLOG << "suffix size " << batch_start->suffix.size();
+
         sb.prefix.resize(batch_start->prefix.size());
         sb.suffix.resize(batch_start->suffix.size());
         for(size_t i=0;i<sb.prefix.size();i++) {
