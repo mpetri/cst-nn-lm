@@ -103,6 +103,21 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
     cstnn_timer timer("create_sentence_batches");
     one_hot_batches_t sent_batches;
     std::sort(all_sentences.begin(),all_sentences.end());
+
+    size_t longest_sent = 0;
+    size_t id = 0;
+    for(size_t i=0;i<all_sentences.size();i++) {
+        size_t len = all_sentences[i].prefix.size() + all_sentences[i].suffix.size();
+        if(len > longest_sent) {
+            id = i;
+            longest_sent = len;
+        }
+    }
+
+    CNLOG << "LS LEN = " << longest_sent;
+    CNLOG << "LS PREFIX = " << corpus.vocab.print_sentence(all_sentences[id].prefix);
+    CNLOG << "LS SUFFIX = " << corpus.vocab.print_sentence(all_sentences[id].suffix);
+
     auto s_itr = all_sentences.begin();
     auto s_end = all_sentences.end();
     size_t left = all_sentences.size();
