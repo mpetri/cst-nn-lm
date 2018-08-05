@@ -209,7 +209,7 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
     size_t blen = 0;
     for(size_t i=0;i<sent_batches.size();i++) {
         size_t len = sent_batches[i].prefix.size() + sent_batches[i].suffix.size();
-        if(blen > len) {
+        if(blen < len) {
             longest_batch = i;
             blen = len;
         }
