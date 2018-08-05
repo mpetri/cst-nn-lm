@@ -234,8 +234,20 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
 std::tuple<prefix_batches_t,one_hot_batches_t>
 create_train_batches(const cst_type& cst,const corpus_t& corpus, args_t& args,size_t batch_size)
 {
-    auto all_prefixes = find_all_prefixes(cst,corpus);
-    auto all_sentences = find_all_sentences(all_prefixes,cst,corpus);
+    // mark all sentence starts in a bitvector
+    sdsl::bit_vector sent_pos(cst.size());
+    {
+        cstnn_timer timer("mark all sentence starts in a bitvector");
+        for(size_t i=0;i<corpus.num_sentences;i++) {
+            auto sent_start_pos = corpus.sent_starts[i];
+            auto pos_in_sa_order = cst.csa.isa[sent_start_pos];
+            sent_pos[pos_in_sa_order] = 1;
+        }
+    }
+    sdsl::rank_support_v5<> rank(&sent_pos);
+
+    auto all_prefixes = find_all_prefixes(cst,corpus,rank);
+    auto all_sentences = find_all_sentences(all_prefixes,cst,corpus,sent_pos);
 
     auto prefix_batches = create_prefix_batches(all_prefixes,corpus,batch_size);
     auto sent_batches = create_sentence_batches(all_sentences,corpus,batch_size);

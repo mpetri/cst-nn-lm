@@ -273,6 +273,7 @@ struct data_loader {
         auto directory = args["path"].as<std::string>();
         auto train_file = directory + "/" + constants::TRAIN_FILE;
         auto parsed_file = directory + "/" + constants::PARSED_TRAIN_FILE + "-" + std::to_string(vocab_threshold);
+        auto max_num_sents = args["num_sents"].as<uint32_t>();
 
         corpus_t c;
         c.file = train_file;
@@ -285,6 +286,10 @@ struct data_loader {
             c.store(parsed_file);
         }
 
+        if(max_num_sents != 0) {
+            c.num_sentences = max_num_sents;
+        }
+
         CNLOG << "\t\tnum tokens = " << c.num_tokens;
         CNLOG << "\t\tnum sentences = " << c.num_sentences;
         CNLOG << "\t\tnum duplicate sentences = " << c.num_duplicates;
@@ -293,7 +298,7 @@ struct data_loader {
               << double(c.num_oov * 100) / double(c.num_tokens) << "%)";
         CNLOG << "\t\tsentence len dist = ";
         std::vector<uint32_t> sent_len_dist(constants::MAX_SENTENCE_LEN+3); // <s> </s>
-        for(size_t i=0;i<c.sent_lens.size();i++) {
+        for(size_t i=0;i<c.num_sentences;i++) {
             sent_len_dist[c.sent_lens[i]]++;
         }
         for(size_t i=0;i<sent_len_dist.size();i++) {

@@ -70,9 +70,17 @@ edge_label(const cst_type& cst,cst_node_type node)
 }
 
 void
-add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type node,const corpus_t& corpus)
+add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type node,const corpus_t& corpus,sdsl::rank_support_v5<>& rank)
 {
     if(!cst.is_leaf(node)) {
+
+        // check if there is a sentence of interest in that subtree
+        auto lb = cst.lb(node);
+        auto rb = cst.rb(node);
+        auto rank_lb = rank(lb);
+        auto rank_rb = rank(rb+1);
+        if(rank_lb == rank_rb) return;
+
         prefix_t p;
         p.node = node;
         p.prefix = edge_label(cst,node);
@@ -81,9 +89,11 @@ add_prefix(std::vector<prefix_t>& prefixes,const cst_type& cst,cst_node_type nod
 }
 
 std::vector<prefix_t>
-find_all_prefixes(const cst_type& cst,const corpus_t& corpus)
+find_all_prefixes(const cst_type& cst,const corpus_t& corpus,sdsl::rank_support_v5<>& rank)
 {
     cstnn_timer timer("find_all_prefixes");
+
+
     std::vector<prefix_t> prefixes;
     auto lb = cst.csa.C[corpus.vocab.start_sent_tok];
     auto rb = cst.csa.C[corpus.vocab.start_sent_tok + 1] - 1;
@@ -95,7 +105,7 @@ find_all_prefixes(const cst_type& cst,const corpus_t& corpus)
     while(cst_itr != cst_end) {
         auto cur_node = *cst_itr;
         if(cst_itr.visit() == 2) {
-            add_prefix(prefixes,cst,cur_node,corpus);
+            add_prefix(prefixes,cst,cur_node,corpus,rank);
         }
         ++cst_itr;
     }
@@ -129,7 +139,7 @@ add_sentence(std::vector<sentence_t>& sentences,prefix_t& p,size_t tok,const cst
 }
 
 std::vector<sentence_t>
-find_all_sentences(std::vector<prefix_t>& all_prefixes,const cst_type& cst,const corpus_t& corpus)
+find_all_sentences(std::vector<prefix_t>& all_prefixes,const cst_type& cst,const corpus_t& corpus,sdsl::bit_vector& valid)
 {
     cstnn_timer timer("find_all_sentences");
     std::vector<sentence_t> sentences;
@@ -138,7 +148,7 @@ find_all_sentences(std::vector<prefix_t>& all_prefixes,const cst_type& cst,const
         auto node_depth = cst.depth(prefix.node);
         for (const auto& child : cst.children(prefix.node)) {
             size_t size = cst.size(child);
-            if(size == 1) {
+            if(size == 1 && valid[cst.lb(child)]) {
                 auto tok = cst.edge(child, node_depth + 1);
                 add_sentence(sentences,prefix,tok,cst,corpus);
             }
