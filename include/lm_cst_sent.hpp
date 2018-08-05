@@ -86,6 +86,14 @@ create_prefix_batches(std::vector<prefix_t>& all_prefixes,const corpus_t& corpus
         left -= pb.size;
     }
     CNLOG << "prefix batches = " << prefix_batches.size();
+    std::vector<uint32_t> batch_size_dist(batch_size+1);
+    for(auto& b : prefix_batches) batch_size_dist[b.size]++;
+    for(size_t i=0;i<batch_size_dist.size();i++) {
+        if(batch_size_dist[i] != 0) {
+            double percent = 100.0 * double(batch_size_dist[i]) / double(prefix_batches.size());
+            CNLOG << "\tbatch size " << i << " - # " << batch_size_dist[i] << " (" << percent << "%)";
+        }
+    }
     return prefix_batches;
 }
 
@@ -124,16 +132,11 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
                 tmp->suffix.push_back( corpus.vocab.eof_tok );
             }
             auto after = tmp->suffix.size();
-            CNLOG << "padd suffix by " << after-before;
             ++tmp;
         }
         one_hot_batch_t sb;
 
         sb.size = std::distance(batch_start,batch_end);
-
-        CNLOG << "batch size " << sb.size;
-        CNLOG << "prefix size " << batch_start->prefix.size();
-        CNLOG << "suffix size " << batch_start->suffix.size();
 
         sb.prefix.resize(batch_start->prefix.size());
         sb.suffix.resize(batch_start->suffix.size());
@@ -154,6 +157,14 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
         left -= sb.size;
     }
     CNLOG << "sentence batches = " << sent_batches.size();
+    std::vector<uint32_t> batch_size_dist(batch_size+1);
+    for(auto& b : sent_batches) batch_size_dist[b.size]++;
+    for(size_t i=0;i<batch_size_dist.size();i++) {
+        if(batch_size_dist[i] != 0) {
+            double percent = 100.0 * double(batch_size_dist[i]) / double(sent_batches.size());
+            CNLOG << "\tbatch size " << i << " - # " << batch_size_dist[i] << " (" << percent << "%)";
+        }
+    }
     return sent_batches;
 }
 
