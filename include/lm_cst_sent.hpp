@@ -339,6 +339,7 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
                       << " batch_type = " << batch_type
                       << " batch_size = " << batch_size
                       << " TIME = "<< time_per_instance << "ms/instance"
+                      << " ABSTIME = "<< train_diff.count()* 1000.0 << "ms"
                       << " ppl = " << exp(instance_loss);
             }
         }
