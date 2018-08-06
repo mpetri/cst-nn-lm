@@ -100,8 +100,10 @@ int main(int argc, char** argv)
             train_cst_sent(lm,corpus, args,*trainer);
         } else if(lm_type == "cst_sent_pfirst_sort") {
             train_cst_sent_prefix_first_sort(lm,corpus, args,*trainer);
+        } else if(lm_type == "cst_sent_seq") {
+            train_cst_sent_seq(lm,corpus, args,*trainer);
         } else {
-            CNLOG << "ERROR: incorrect lm type. options are: standard, cst_sent, cst_sent_pfirst, cst_sent_pfirst_sort";
+            CNLOG << "ERROR: incorrect lm type. options are: standard, cst_sent, cst_sent_pfirst, cst_sent_seq";
             exit(EXIT_FAILURE);
         }
 
