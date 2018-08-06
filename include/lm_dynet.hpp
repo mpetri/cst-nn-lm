@@ -172,6 +172,8 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
         auto last_report = sentences.begin();
         auto itr = sentences.begin();
         auto end = sentences.end();
+        double total_predictions = 0;
+        double total_loss = 0;
         while (itr != end) {
             auto batch_end = itr + std::min(batch_size,size_t(std::distance(itr,end)));
             auto actual_batch_size = std::distance(itr,batch_end);
@@ -182,6 +184,8 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             auto loss_expr = std::get<0>(loss_tuple);
             auto num_predictions = std::get<1>(loss_tuple);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
+            total_loss += loss_float;
+            total_predictions += num_predictions;
             auto instance_loss = loss_float / num_predictions;
             cg.backward(loss_expr);
             trainer.update();
@@ -198,7 +202,8 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
                       << " batch_size = " << actual_batch_size
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " num_predictions = " << num_predictions
-                      << " ppl = " << exp(instance_loss);
+                      << " ppl = " << exp(instance_loss)
+                      << " avg-ppl = " << exp(total_loss / total_predictions);
             }
         }
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
