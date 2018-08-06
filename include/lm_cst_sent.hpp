@@ -221,7 +221,6 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
     for(size_t i=0;i<sent_batches.size();i++) {
         size_t len = sent_batches[i].prefix.size() + sent_batches[i].suffix.size();
         if(blen < len) {
-            longest_batch = i;
             blen = len;
         }
     }
@@ -462,7 +461,6 @@ void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus,
     std::chrono::duration<double> prep_diff = prep_end - prep_start;
     CNLOG << "created batches in " << " - " << prep_diff.count() << "s";
 
-    trainer.clip_threshold = 0;
     std::mt19937 rng(constants::RAND_SEED);
     std::vector<uint32_t> pbatch_ids(prefix_batches.size());
     std::vector<uint32_t> sbatch_ids(one_hot_batches.size());

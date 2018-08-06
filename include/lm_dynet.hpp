@@ -129,7 +129,6 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
     CNLOG << "created batches in " << " - " << prep_diff.count() << "s";
 
     CNLOG << "number of sentences = " << sentences.size();
-    trainer.clip_threshold = 0;
     std::mt19937 gen(constants::RAND_SEED);
     std::uniform_int_distribution<> dis(0,100000000);
     double best_pplx = std::numeric_limits<double>::max();
