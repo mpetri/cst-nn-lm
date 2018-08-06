@@ -25,6 +25,7 @@ po::variables_map parse_args(int argc, char** argv)
         ("store", po::value<std::string>(), "store model after construction")
         ("optimizer", po::value<std::string>(), "optimizer type: SGD or Adam")
         ("type", po::value<std::string>()->required(), "lm type")
+        ("lr", po::value<double>()->default_value(0.001), "learning rate")
         ("test", "test only. no train.")
         ("vocab_size", po::value<uint32_t>()->default_value(defaults::VOCAB_SIZE), "vocab size")
         ("layers", po::value<uint32_t>()->default_value(defaults::LAYERS), "layers of the rnn")
@@ -78,16 +79,17 @@ int main(int argc, char** argv)
     } 
 
     dynet::Trainer* trainer = nullptr;
+    double learning_rate = args["lr"].as<double>();
     if(args.count("optimizer") != 0) {
         auto opt_type = args["optimizer"].as<std::string>();
         if(opt_type == "SGD") {
-            trainer = new SimpleSGDTrainer(lm.model,0.001);
+            trainer = new SimpleSGDTrainer(lm.model,learning_rate);
         }
         if(opt_type == "Adam") {
-            trainer = new dynet::AdamTrainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
+            trainer = new dynet::AdamTrainer(lm.model, learning_rate, 0.9, 0.999, 1e-8);
         }
     } else {
-        trainer = new dynet::AdamTrainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
+        trainer = new dynet::AdamTrainer(lm.model, learning_rate, 0.9, 0.999, 1e-8);
     }
     trainer->clip_threshold = 0;
     
