@@ -59,7 +59,7 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg, t_itr& s
     lm.rnn.new_graph(cg);
     lm.rnn.start_new_sequence();
     if(drop_out != 0.0) {
-        lm.rnn.set_dropout(drop_out);
+        lm.rnn.set_dropout(0,drop_out,0);
     }
 
     lm.i_R = dynet::parameter(cg, lm.p_R);
@@ -100,7 +100,8 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg, t_itr& s
     return std::make_tuple(sum_batches(sum(errs)), actual_predictions);
 }
 
-void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args)
+template<class t_trainer>
+void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_trainer& trainer)
 {
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
@@ -128,8 +129,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args)
     CNLOG << "created batches in " << " - " << prep_diff.count() << "s";
 
     CNLOG << "number of sentences = " << sentences.size();
-    dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
-    trainer.clip_threshold = trainer.clip_threshold * batch_size;
+    trainer.clip_threshold = 0;
     std::mt19937 gen(constants::RAND_SEED);
     std::uniform_int_distribution<> dis(0,100000000);
     double best_pplx = std::numeric_limits<double>::max();

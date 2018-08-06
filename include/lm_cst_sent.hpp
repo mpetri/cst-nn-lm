@@ -217,7 +217,6 @@ create_sentence_batches(std::vector<sentence_t>& all_sentences,const corpus_t& c
         }
     }
 
-    size_t longest_batch = 0;
     size_t blen = 0;
     for(size_t i=0;i<sent_batches.size();i++) {
         size_t len = sent_batches[i].prefix.size() + sent_batches[i].suffix.size();
@@ -330,7 +329,8 @@ void compute_dist(prefix_batch_t& pb,const cst_type& cst,const corpus_t& corpus)
     }
 }
 
-void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
+template<class t_trainer>
+void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args,t_trainer& trainer)
 {
     CNLOG << "build or load CST";
     auto cst = build_or_load_cst(corpus, args);
@@ -356,7 +356,6 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
     std::chrono::duration<double> prep_diff = prep_end - prep_start;
     CNLOG << "created batches in " << " - " << prep_diff.count() << "s";
 
-    dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
     std::mt19937 rng(constants::RAND_SEED);
     std::vector<uint32_t> batch_ids(prefix_batches.size()+one_hot_batches.size());
     for(size_t i=0;i<batch_ids.size();i++) batch_ids[i] = i;
@@ -436,8 +435,8 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
 
 }
 
-
-void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args_t& args)
+template<class t_trainer>
+void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus, args_t& args,t_trainer& trainer)
 {
     CNLOG << "build or load CST";
     auto cst = build_or_load_cst(corpus, args);
@@ -463,18 +462,18 @@ void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args
     std::chrono::duration<double> prep_diff = prep_end - prep_start;
     CNLOG << "created batches in " << " - " << prep_diff.count() << "s";
 
-    dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
+    trainer.clip_threshold = 0;
     std::mt19937 rng(constants::RAND_SEED);
     std::vector<uint32_t> pbatch_ids(prefix_batches.size());
     std::vector<uint32_t> sbatch_ids(one_hot_batches.size());
     for(size_t i=0;i<pbatch_ids.size();i++) pbatch_ids[i] = i;
     for(size_t i=0;i<sbatch_ids.size();i++) sbatch_ids[i] = i;
 
+    std::sort(prefix_batches.begin(),prefix_batches.end());
     double best_pplx = std::numeric_limits<double>::max();
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
 
-        std::shuffle(pbatch_ids.begin(),pbatch_ids.end(), rng);
         std::shuffle(sbatch_ids.begin(),sbatch_ids.end(), rng);
 
         size_t last_report = 0;
@@ -490,7 +489,6 @@ void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args
             auto& cur_batch = prefix_batches[cur_batch_id];
             compute_dist(cur_batch,cst,corpus);
 
-            trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
             std::tie(loss,num_predictions) = build_train_graph_prefix(lm,cg,cur_batch,drop_out);
 
             loss_float = dynet::as_scalar(cg.forward(loss));
@@ -528,7 +526,6 @@ void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args
             float loss_float;
             std::string batch_type = "S";
             auto& cur_batch = one_hot_batches[cur_batch_id];
-            trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
             std::tie(loss,num_predictions) = build_train_graph_sents(lm,cg,cur_batch,drop_out);
             loss_float = dynet::as_scalar(cg.forward(loss));
             cg.backward(loss);
@@ -562,127 +559,6 @@ void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args
             CNLOG << "store language model to " << lm_file_path;
             lm.store(lm_file_path);
         }
-    }
-
-}
-
-
-void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus, args_t& args)
-{
-    CNLOG << "build or load CST";
-    auto cst = build_or_load_cst(corpus, args);
-
-    auto num_epochs = args["epochs"].as<size_t>();
-    auto batch_size = args["batch_size"].as<size_t>();
-    auto drop_out = args["drop_out"].as<double>();
-    int64_t report_interval = args["report_interval"].as<size_t>();
-
-    CNLOG << "start training cst sentence lm";
-    CNLOG << "\tepochs = " << num_epochs;
-    CNLOG << "\tbatch_size = " << batch_size;
-    CNLOG << "\tdrop_out = " << drop_out;
-    auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
-
-    // (1) create the batches
-    CNLOG << "create the batches. batch_size = " << batch_size;
-    std::vector<prefix_batch_t> prefix_batches;
-    std::vector<one_hot_batch_t> one_hot_batches;
-    auto prep_start = std::chrono::high_resolution_clock::now();
-    std::tie(prefix_batches,one_hot_batches) = create_train_batches(cst,corpus,args,batch_size);
-    auto prep_end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> prep_diff = prep_end - prep_start;
-    CNLOG << "created batches in " << " - " << prep_diff.count() << "s";
-
-    dynet::AdamTrainer trainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
-    std::mt19937 rng(constants::RAND_SEED);
-    std::vector<uint32_t> pbatch_ids(prefix_batches.size());
-    std::vector<uint32_t> sbatch_ids(one_hot_batches.size());
-    for(size_t i=0;i<pbatch_ids.size();i++) pbatch_ids[i] = i;
-    for(size_t i=0;i<sbatch_ids.size();i++) sbatch_ids[i] = i;
-
-    std::sort(prefix_batches.begin(),prefix_batches.end());
-    for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
-        CNLOG << "start epoch " << epoch << "/" << num_epochs;
-
-        std::shuffle(sbatch_ids.begin(),sbatch_ids.end(), rng);
-
-        size_t last_report = 0;
-        for(size_t i=0;i<pbatch_ids.size();i++) {
-            auto train_start = std::chrono::high_resolution_clock::now();
-            auto cur_batch_id = pbatch_ids[i];
-
-            dynet::Expression loss;
-            size_t num_predictions;
-            dynet::ComputationGraph cg;
-            float loss_float;
-            std::string batch_type = "P";
-            auto& cur_batch = prefix_batches[cur_batch_id];
-            compute_dist(cur_batch,cst,corpus);
-
-            trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
-            std::tie(loss,num_predictions) = build_train_graph_prefix(lm,cg,cur_batch,drop_out);
-
-            loss_float = dynet::as_scalar(cg.forward(loss));
-            cg.backward(loss);
-            trainer.update();
-
-            cur_batch.dist.clear();
-            cur_batch.dist.shrink_to_fit();
-
-            auto instance_loss = loss_float / num_predictions;
-            auto train_stop = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> train_diff = train_stop - train_start;
-            auto time_per_instance = train_diff.count() / num_predictions * 1000.0;
-
-            if ( int64_t(i-last_report) >= report_interval || i+1 == pbatch_ids.size()) {
-                double percent = double(i) / double(pbatch_ids.size()) * 100;
-                last_report = i;
-                CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
-                      << (i+1) << "/" << pbatch_ids.size()
-                      << " batch_type = " << batch_type
-                      << " batch_size = " << num_predictions
-                      << " TIME = "<< time_per_instance << "ms/instance"
-                      << " ppl = " << exp(instance_loss);
-            }
-        }
-
-        last_report = 0;
-        for(size_t i=0;i<sbatch_ids.size();i++) {
-            auto train_start = std::chrono::high_resolution_clock::now();
-            auto cur_batch_id = sbatch_ids[i];
-
-            dynet::Expression loss;
-            size_t num_predictions;
-            dynet::ComputationGraph cg;
-            float loss_float;
-            std::string batch_type = "S";
-            auto& cur_batch = one_hot_batches[cur_batch_id];
-            trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
-            std::tie(loss,num_predictions) = build_train_graph_sents(lm,cg,cur_batch,drop_out);
-            loss_float = dynet::as_scalar(cg.forward(loss));
-            cg.backward(loss);
-            trainer.update();
-
-            auto instance_loss = loss_float / num_predictions;
-            auto train_stop = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> train_diff = train_stop - train_start;
-            auto time_per_instance = train_diff.count() / num_predictions * 1000.0;
-
-            if ( int64_t(i-last_report) >= report_interval || i+1 == sbatch_ids.size()) {
-                double percent = double(i) / double(sbatch_ids.size()) * 100;
-                last_report = i;
-                CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
-                      << (i+1) << "/" << sbatch_ids.size()
-                      << " batch_type = " << batch_type
-                      << " batch_size = " << num_predictions
-                      << " TIME = "<< time_per_instance << "ms/instance"
-                      << " ppl = " << exp(instance_loss);
-            }
-        }
-
-        CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
-        auto pplx = evaluate_pplx(lm, corpus, dev_corpus_file);
-        CNLOG << "epoch " << epoch << " dev pplx = " << pplx;
     }
 
 }

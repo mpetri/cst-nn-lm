@@ -23,6 +23,7 @@ po::variables_map parse_args(int argc, char** argv)
         ("num_sents", po::value<uint32_t>()->default_value(defaults::MAX_NUM_SENTS), "number of sentences to train on. (prefix)")
         ("load", po::value<std::string>(), "load model instead of constructing one")
         ("store", po::value<std::string>(), "store model after construction")
+        ("optimizer", po::value<std::string>(), "optimizer type: SGD or Adam")
         ("type", po::value<std::string>()->required(), "lm type")
         ("test", "test only. no train.")
         ("vocab_size", po::value<uint32_t>()->default_value(defaults::VOCAB_SIZE), "vocab size")
@@ -75,18 +76,29 @@ int main(int argc, char** argv)
         CNLOG << "load language model from " << lm_file_path;
         lm.load(lm_file_path);
     } 
+
+    dynet::Trainer* trainer = nullptr;
+    if(args.count("optimizer") != 0) {
+        auto opt_type = args["optimizer"].as<std::string>();
+        if(opt_type == "SGD") {
+            trainer = new SimpleSGDTrainer(lm.model,0.001);
+        }
+        if(opt_type == "Adam") {
+            trainer = new dynet::AdamTrainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
+        }
+    } else {
+        trainer = new dynet::AdamTrainer(lm.model, 0.001, 0.9, 0.999, 1e-8);
+    }
     
     if(args.count("test") == 0) {
         CNLOG << "create language model";
 
         if(lm_type == "standard") {
-            train_dynet_lm(lm,corpus, args);
+            train_dynet_lm(lm,corpus, args,*trainer);
         } else if(lm_type == "cst_sent") {
-            train_cst_sent(lm,corpus, args);
-        } else if(lm_type == "cst_sent_pfirst") {
-            train_cst_sent_prefix_first(lm,corpus, args);
+            train_cst_sent(lm,corpus, args,*trainer);
         } else if(lm_type == "cst_sent_pfirst_sort") {
-            train_cst_sent_prefix_first_sort(lm,corpus, args);
+            train_cst_sent_prefix_first_sort(lm,corpus, args,*trainer);
         } else {
             CNLOG << "ERROR: incorrect lm type. options are: standard, cst_sent, cst_sent_pfirst, cst_sent_pfirst_sort";
             exit(EXIT_FAILURE);
@@ -104,5 +116,6 @@ int main(int argc, char** argv)
     auto pplx = evaluate_pplx(lm, corpus, test_corpus_file);
     CNLOG << "test pplx = " << pplx;
 
+    delete trainer;
     return 0;
 }
