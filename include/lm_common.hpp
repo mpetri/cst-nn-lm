@@ -50,8 +50,12 @@ struct language_model {
     }
 
     void load(std::string file_name) {
-        dynet::TextFileLoader l(file_name);
-        l.populate(model);
+        if (boost::filesystem::exists(file_name)) {
+            dynet::TextFileLoader l(file_name);
+            l.populate(model);
+        } else {
+            CNLOG << "ERROR: model file " << file_name << " does not exist.";
+        }
     }
 };
 

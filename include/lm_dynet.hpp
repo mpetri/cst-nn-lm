@@ -132,6 +132,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args)
     trainer.clip_threshold = trainer.clip_threshold * batch_size;
     std::mt19937 gen(constants::RAND_SEED);
     std::uniform_int_distribution<> dis(0,100000000);
+    double best_pplx = std::numeric_limits<double>::max();
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
 
@@ -204,5 +205,14 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args)
 
         auto pplx = evaluate_pplx(lm, corpus, dev_corpus_file);
         CNLOG << "epoch " << epoch << " dev pplx = " << pplx;
+
+        if( pplx < best_pplx && args.count("store") ) {
+            CNLOG << "better dev pplx. store model";
+            best_pplx = pplx;
+            auto lm_file_path = args["store"].as<std::string>();
+            CNLOG << "store language model to " << lm_file_path;
+            lm.store(lm_file_path);
+        }
+
     }
 }

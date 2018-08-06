@@ -24,6 +24,7 @@ po::variables_map parse_args(int argc, char** argv)
         ("load", po::value<std::string>(), "load model instead of constructing one")
         ("store", po::value<std::string>(), "store model after construction")
         ("type", po::value<std::string>()->required(), "lm type")
+        ("test", "test only. no train.")
         ("vocab_size", po::value<uint32_t>()->default_value(defaults::VOCAB_SIZE), "vocab size")
         ("layers", po::value<uint32_t>()->default_value(defaults::LAYERS), "layers of the rnn")
         ("input_dim", po::value<uint32_t>()->default_value(defaults::INPUT_DIM), "input embedding size")
@@ -73,7 +74,9 @@ int main(int argc, char** argv)
         auto lm_file_path = args["load"].as<std::string>();
         CNLOG << "load language model from " << lm_file_path;
         lm.load(lm_file_path);
-    } else {
+    } 
+    
+    if(args.count("test") == 0) {
         CNLOG << "create language model";
 
         if(lm_type == "standard") {

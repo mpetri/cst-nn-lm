@@ -361,6 +361,7 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
     std::vector<uint32_t> batch_ids(prefix_batches.size()+one_hot_batches.size());
     for(size_t i=0;i<batch_ids.size();i++) batch_ids[i] = i;
 
+    double best_pplx = std::numeric_limits<double>::max();
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
         std::shuffle(batch_ids.begin(),batch_ids.end(), rng);
@@ -422,6 +423,15 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args)
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
         auto pplx = evaluate_pplx(lm, corpus, dev_corpus_file);
         CNLOG << "epoch " << epoch << " dev pplx = " << pplx;
+
+        if( pplx < best_pplx && args.count("store") ) {
+            CNLOG << "better dev pplx. store model";
+            best_pplx = pplx;
+            auto lm_file_path = args["store"].as<std::string>();
+            CNLOG << "store language model to " << lm_file_path;
+            lm.store(lm_file_path);
+        }
+
     }
 
 }
@@ -460,6 +470,7 @@ void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args
     for(size_t i=0;i<pbatch_ids.size();i++) pbatch_ids[i] = i;
     for(size_t i=0;i<sbatch_ids.size();i++) sbatch_ids[i] = i;
 
+    double best_pplx = std::numeric_limits<double>::max();
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
 
@@ -543,6 +554,14 @@ void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
         auto pplx = evaluate_pplx(lm, corpus, dev_corpus_file);
         CNLOG << "epoch " << epoch << " dev pplx = " << pplx;
+
+        if( pplx < best_pplx && args.count("store") ) {
+            CNLOG << "better dev pplx. store model";
+            best_pplx = pplx;
+            auto lm_file_path = args["store"].as<std::string>();
+            CNLOG << "store language model to " << lm_file_path;
+            lm.store(lm_file_path);
+        }
     }
 
 }
