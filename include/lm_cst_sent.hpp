@@ -643,7 +643,7 @@ void train_cst_sent_seq(language_model& lm,const corpus_t& corpus, args_t& args,
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
         std::shuffle(sbatch_ids.begin(),sbatch_ids.end(), rng);
-        last_report = 0;
+        size_t last_report = 0;
         for(size_t i=0;i<sbatch_ids.size();i++) {
             auto train_start = std::chrono::high_resolution_clock::now();
             auto cur_batch_id = sbatch_ids[i];
