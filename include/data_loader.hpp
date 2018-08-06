@@ -286,7 +286,9 @@ struct data_loader {
             c.store(parsed_file);
         }
 
-        if(max_num_sents != 0) {
+        if(max_num_sents != 0 && max_num_sents < c.num_sentences) {
+            CNLOG "\t\t actual sentences = " << c.num_sentences;
+            CNLOG "\t\t capping num sentences to the first " << max_num_sents;
             c.num_sentences = max_num_sents;
         }
 
@@ -296,17 +298,6 @@ struct data_loader {
         CNLOG << "\t\tnum oov = " << c.num_oov << " ("
               << std::fixed << std::setprecision(1)
               << double(c.num_oov * 100) / double(c.num_tokens) << "%)";
-        CNLOG << "\t\tsentence len dist = ";
-        std::vector<uint32_t> sent_len_dist(constants::MAX_SENTENCE_LEN+3); // <s> </s>
-        for(size_t i=0;i<c.num_sentences;i++) {
-            sent_len_dist[c.sent_lens[i]]++;
-        }
-        for(size_t i=0;i<sent_len_dist.size();i++) {
-            if(sent_len_dist[i] != 0) {
-                double percent = 100.0 * double(sent_len_dist[i]) / double(c.num_sentences);
-                CNLOG << "\t\t\tlen " << i << " - occ " << sent_len_dist[i] << " (" << percent << "%)";
-            }
-        }
         return c;
     }
 

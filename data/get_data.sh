@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# wget https://s3.amazonaws.com/research.metamind.io/wikitext/wikitext-103-v1.zip
-# unzip wikitext-103-v1.zip
-# perl ../tools/split-sentences.perl < wikitext-103/wiki.train.tokens > wikitext-103/raw.txt
-# perl ../tools/tokenizer.perl < ./wikitext-103/raw.txt > ./news.2007/train.txt
-
 wget http://www.statmt.org/wmt14/training-monolingual-news-crawl/news.2007.en.shuffled.gz
 gzip -d news.2007.en.shuffled.gz
 mkdir -p news.2007
@@ -60,8 +55,6 @@ cat ./news.2007/raw.tok ./news.2008/raw.tok ./news.2009/raw.tok ./news.2010/raw.
 sort --parallel=8 -u ./news.combined/raw.tok > ./news.combined/uniq.tok
 sort --parallel=8 -R ./news.combined/uniq.tok > ./news.combined/uniq.tok.shuffled
 head -n -10000 ./news.combined/uniq.tok.shuffled > ./news.combined/train.txt
-head -n 1M ./news.combined/uniq.tok.shuffled > ./news.combined/train_1M.txt
-head -n 3M ./news.combined/uniq.tok.shuffled > ./news.combined/train_3M.txt
 tail -n 10000 ./news.combined/uniq.tok.shuffled > ./news.combined/valid_and_test.txt
 tail -n 5000 ./news.combined/valid_and_test.txt > ./news.combined/test.txt
 head -n 5000 ./news.combined/valid_and_test.txt > ./news.combined/valid.txt
