@@ -287,8 +287,8 @@ struct data_loader {
         }
 
         if(max_num_sents != 0 && max_num_sents < c.num_sentences) {
-            CNLOG "\t\t actual sentences = " << c.num_sentences;
-            CNLOG "\t\t capping num sentences to the first " << max_num_sents;
+            CNLOG << "\t\t actual sentences = " << c.num_sentences;
+            CNLOG << "\t\t capping num sentences to the first " << max_num_sents;
             c.num_sentences = max_num_sents;
         }
 
