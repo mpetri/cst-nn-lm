@@ -59,7 +59,7 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg, t_itr& s
     lm.rnn.new_graph(cg);
     lm.rnn.start_new_sequence();
     if(drop_out != 0.0) {
-        lm.rnn.set_dropout(0,drop_out,0);
+        lm.rnn.set_dropout(0,drop_out);
     }
 
     lm.i_R = dynet::parameter(cg, lm.p_R);

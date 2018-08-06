@@ -259,7 +259,7 @@ build_train_graph_prefix(language_model& lm,dynet::ComputationGraph& cg,prefix_b
     lm.rnn.new_graph(cg);
     lm.rnn.start_new_sequence();
     if(drop_out != 0.0) {
-        lm.rnn.set_dropout(drop_out);
+        lm.rnn.set_dropout(0,drop_out);
     }
     lm.i_R = dynet::parameter(cg, lm.p_R);
     lm.i_bias = dynet::parameter(cg, lm.p_bias);
@@ -284,7 +284,7 @@ build_train_graph_sents(language_model& lm,dynet::ComputationGraph& cg,one_hot_b
     lm.rnn.new_graph(cg);
     lm.rnn.start_new_sequence();
     if(drop_out != 0.0) {
-        lm.rnn.set_dropout(drop_out);
+        lm.rnn.set_dropout(0,drop_out);
     }
     lm.i_R = dynet::parameter(cg, lm.p_R);
     lm.i_bias = dynet::parameter(cg, lm.p_bias);
