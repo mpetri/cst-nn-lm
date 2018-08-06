@@ -91,7 +91,6 @@ int main(int argc, char** argv)
     } else {
         trainer = new dynet::AdamTrainer(lm.model, learning_rate, 0.9, 0.999, 1e-8);
     }
-    trainer->clip_threshold = 0;
     
     if(args.count("test") == 0) {
         CNLOG << "create language model";
