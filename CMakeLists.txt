@@ -69,3 +69,10 @@ target_link_libraries(create_parsed
   divsufsort64
   )
 
+  add_executable(create_lm_ngram src/create_lm_ngram.cpp)
+  target_link_libraries(create_lm_ngram
+    ${Boost_LIBRARIES}
+    dynet
+    divsufsort
+    divsufsort64
+    )
