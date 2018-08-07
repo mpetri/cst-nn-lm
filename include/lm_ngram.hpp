@@ -95,7 +95,9 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,cor
         *ctx_end = dynet::lookup(cg, lm.p_c, current_tok);
 
         // Concact with the previous ngram-size-1 toks
-        auto i_x_t = dynet::concatenate(ctx_start,ctx_end);
+        auto i_x_t = dynet::concatenate(ctx_start,ctx_start+1);
+        for(size_t j=2;j<lm.NGRAM_SIZE;j++)
+            i_x_t = dynet::concatenate(i_x_t,ctx_start+j);
 
         // Project to the token space using an affine transform
         auto i_r_t = dynet::rectify(lm.i_bias + lm.i_R * i_x_t);
