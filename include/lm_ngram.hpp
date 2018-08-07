@@ -62,7 +62,7 @@ struct language_model_ngram {
 
 template <class t_itr>
 std::tuple<dynet::Expression, size_t>
-build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,corpus_t& corpus,t_itr& start, t_itr& end)
+build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,const corpus_t& corpus,t_itr& start, t_itr& end)
 {
     size_t batch_size = std::distance(start, end);
     size_t sentence_len = start->sentence.size();
