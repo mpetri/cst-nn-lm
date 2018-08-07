@@ -62,7 +62,7 @@ struct language_model_ngram {
 
 template <class t_itr>
 std::tuple<dynet::Expression, size_t>
-build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,const corpus_t& corpus,t_itr& start, t_itr& end)
+build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,const corpus_t& corpus,t_itr start, t_itr end)
 {
     size_t batch_size = std::distance(start, end);
     size_t sentence_len = start->sentence.size();
@@ -135,6 +135,30 @@ evaluate_pplx(language_model_ngram& lm, const corpus_t& corpus, std::string file
     }
     return exp(loss / predictions);
 }
+
+
+struct instance_t {
+    std::vector<uint32_t> sentence;
+    size_t padding = 0;
+    size_t real_len = 0;
+    size_t rand = 0;
+    bool operator<(const instance_t& other) const
+    {
+        if (real_len == other.real_len) {
+            return rand < other.rand;
+        }
+        return real_len < other.real_len;
+    }
+    template <class t_itr>
+    instance_t(t_itr& itr, size_t len)
+    {
+        for (size_t i = 0; i < len; i++) {
+            sentence.push_back(*itr++);
+        }
+        real_len = len;
+    }
+};
+
 
 template<class t_trainer>
 void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t& args,t_trainer& trainer)
