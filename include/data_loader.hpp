@@ -181,7 +181,7 @@ struct corpus_t {
         sdsl::load(text,ifs);
     }
 
-    void store_parsed(std::string output_dir) {
+    void store_parsed(std::string output_dir,corpus_t& valid_corpus,corpus_t& test_corpus) {
         if (!boost::filesystem::is_directory(output_dir) || !boost::filesystem::exists(output_dir)) {
             boost::filesystem::create_directory(output_dir); 
         }
@@ -199,8 +199,6 @@ struct corpus_t {
         }
 
         {
-            auto valid_file = path + "/valid.txt";
-            auto valid_corpus = data_loader::parse_file(corpus.vocab, valid_file);
             std::ofstream valid_out(output_dir+"/valid.txt");
             for(size_t i=0;i<valid_corpus.num_sentences;i++) {
                 auto start = valid_corpus.sent_starts[i];
@@ -213,8 +211,6 @@ struct corpus_t {
         }
 
         {
-            auto test_file = path + "/test.txt";
-            auto test_corpus = data_loader::parse_file(corpus.vocab, test_file);
             std::ofstream test_out(output_dir+"/test.txt");
             for(size_t i=0;i<test_corpus.num_sentences;i++) {
                 auto start = test_corpus.sent_starts[i];

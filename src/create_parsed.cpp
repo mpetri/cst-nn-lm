@@ -52,8 +52,14 @@ int main(int argc, char** argv)
     CNLOG << "load and parse data";
     auto corpus = data_loader::load(args);
 
+    auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
+    auto test_corpus_file = args["path"].as<std::string>() + "/" + constants::TEST_FILE;
+    
+    auto dev_corpus = data_loader::parse_file(corpus.vocab, dev_corpus_file);
+    auto test_corpus = data_loader::parse_file(corpus.vocab, test_corpus_file);
+
     CNLOG << "store parsed data";
-    corpus.store_parsed(args["opath"]);
+    corpus.store_parsed(args["opath"],dev_corpus,test_corpus);
 
     return 0;
 }
