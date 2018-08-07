@@ -22,6 +22,9 @@ struct language_model_ngram {
     dynet::LookupParameter p_c;
     dynet::Parameter p_R;
     dynet::Parameter p_bias;
+    dynet::Parameter p_O;
+    dynet::Parameter p_bias_O;
+
     dynet::Expression i_c;
     dynet::Expression i_R;
     dynet::Expression i_bias;
