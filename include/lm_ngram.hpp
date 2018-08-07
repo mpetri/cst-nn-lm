@@ -25,6 +25,8 @@ struct language_model_ngram {
     dynet::Expression i_c;
     dynet::Expression i_R;
     dynet::Expression i_bias;
+    dynet::Expression i_O;
+    dynet::Expression i_bias_O;
 
     language_model_ngram(const vocab_t& vocab, args_t& args)
     {
@@ -41,7 +43,9 @@ struct language_model_ngram {
         // Add embedding parameters to the model
         p_c = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
         p_R = model.add_parameters({ INPUT_DIM*NGRAM_SIZE, HIDDEN_DIM });
+        p_O = model.add_parameters({ VOCAB_SIZE, HIDDEN_DIM });
         p_bias = model.add_parameters({ HIDDEN_DIM });
+        p_bias_O = model.add_parameters({ VOCAB_SIZE });
     }
 
     void store(std::string file_name) {
@@ -69,6 +73,9 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
 
     lm.i_R = dynet::parameter(cg, lm.p_R);
     lm.i_bias = dynet::parameter(cg, lm.p_bias);
+
+    lm.i_O = dynet::parameter(cg, lm.p_O);
+    lm.i_bias_O = dynet::parameter(cg, lm.p_bias_O);
 
     std::vector<dynet::Expression> errs;
     // Set all inputs to the SOS symbol
@@ -98,8 +105,10 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
         // Project to the token space using an affine transform
         auto i_r_t = dynet::rectify(lm.i_bias + lm.i_R * i_x_t);
 
+        auto i_y_t = lm.i_bias_O + lm.i_O * i_r_t;
+
         // Compute error for each member of the batch
-        auto i_err = dynet::pickneglogsoftmax(i_r_t, next_tok);
+        auto i_err = dynet::pickneglogsoftmax(i_y_t, next_tok);
         errs.push_back(i_err);
 
         // Change input tok and the context for the next prediction
