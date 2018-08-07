@@ -113,32 +113,6 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
 }
 
 
-double
-evaluate_pplx(language_model_ngram& lm, const corpus_t& corpus, std::string file)
-{
-    double loss = 0.0;
-    double predictions = 0;
-    auto test_corpus = data_loader::parse_file(corpus.vocab, file);
-    boost::progress_display show_progress(test_corpus.num_sentences);
-    std::vector< std::vector<uint32_t> > sents;
-    for (size_t i = 0; i < test_corpus.num_sentences; i++) {
-        auto start_sent = test_corpus.text.begin() + test_corpus.sent_starts[i];
-        auto sent_len = test_corpus.sent_lens[i];
-        sents.emplace_back(start_sent,start_sent+sent_len);
-    }
-    for (size_t i = 0; i < test_corpus.num_sentences; i++) {
-        dynet::ComputationGraph cg;
-        auto loss_tuple = build_train_graph_ngram(lm, cg,corpus, sents.begin() + i, sents.begin() + i + 1);
-        auto loss_expr = std::get<0>(loss_tuple);
-        auto num_predictions = std::get<1>(loss_tuple);
-        auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
-        loss += loss_float;
-        predictions += num_predictions;
-        ++show_progress;
-    }
-    return exp(loss / predictions);
-}
-
 
 struct instance_t {
     std::vector<uint32_t> sentence;
@@ -162,6 +136,32 @@ struct instance_t {
     }
 };
 
+
+double
+evaluate_pplx(language_model_ngram& lm, const corpus_t& corpus, std::string file)
+{
+    double loss = 0.0;
+    double predictions = 0;
+    auto test_corpus = data_loader::parse_file(corpus.vocab, file);
+    boost::progress_display show_progress(test_corpus.num_sentences);
+    std::vector<instance_t> sents;
+    for (size_t i = 0; i < test_corpus.num_sentences; i++) {
+        auto start_sent = test_corpus.text.begin() + test_corpus.sent_starts[i];
+        auto sent_len = test_corpus.sent_lens[i];
+        sents.emplace_back(start_sent,sent_len);
+    }
+    for (size_t i = 0; i < test_corpus.num_sentences; i++) {
+        dynet::ComputationGraph cg;
+        auto loss_tuple = build_train_graph_ngram(lm, cg,corpus, sents.begin() + i, sents.begin() + i + 1);
+        auto loss_expr = std::get<0>(loss_tuple);
+        auto num_predictions = std::get<1>(loss_tuple);
+        auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
+        loss += loss_float;
+        predictions += num_predictions;
+        ++show_progress;
+    }
+    return exp(loss / predictions);
+}
 
 template<class t_trainer>
 void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t& args,t_trainer& trainer)
