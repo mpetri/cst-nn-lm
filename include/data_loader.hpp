@@ -203,10 +203,10 @@ struct corpus_t {
             for(size_t i=0;i<valid_corpus.num_sentences;i++) {
                 auto start = valid_corpus.sent_starts[i];
                 auto len = valid_corpus.sent_lens[i];
-                for(size_t j=0;j<len;j++) {
-                    valid_out << vocab.inverse_lookup(valid_corpus.text[start+i]);
+                for(size_t j=0;j<len-1;j++) {
+                    valid_out << vocab.inverse_lookup(valid_corpus.text[start+j]) << " ";
                 }
-                valid_out << "\n";
+                valid_out << vocab.inverse_lookup(valid_corpus.text[start+len-1]) << "\n";
             }
         }
 
