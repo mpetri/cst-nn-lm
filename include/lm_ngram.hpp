@@ -82,8 +82,6 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
     std::vector< dynet::Expression > context;
     for(size_t i=0;i<lm.NGRAM_SIZE-1;i++)
         context.push_back(dynet::lookup(cg, lm.p_c, padding_tok));
-    auto ctx_start = context.begin();
-    auto ctx_end = context.begin() + lm.NGRAM_SIZE - 1;
 
     for (size_t i = 0; i < sentence_len - 1; ++i) {
         for (size_t j = 0; j < batch_size; j++) {
