@@ -69,7 +69,7 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,cor
     lm.i_R = dynet::parameter(cg, lm.p_R);
     lm.i_bias = dynet::parameter(cg, lm.p_bias);
 
-    std::vector<Expression> errs;
+    std::vector<dynet::Expression> errs;
     // Set all inputs to the SOS symbol
     auto sos_tok = start->sentence.front();
     std::vector<uint32_t> current_tok(batch_size, sos_tok);
@@ -109,12 +109,12 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,cor
         ++ctx_end;
     }
     // Add all errors
-    return std::make_tuple(sum_batches(sum(errs)), errs.size()*batch_size);
+    return std::make_tuple(dynet::sum_batches(dynet::sum(errs)), errs.size()*batch_size);
 }
 
 
 double
-evaluate_pplx(language_model& lm, const corpus_t& corpus, std::string file)
+evaluate_pplx(language_model_ngram& lm, const corpus_t& corpus, std::string file)
 {
     double loss = 0.0;
     double predictions = 0;
