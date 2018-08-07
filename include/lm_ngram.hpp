@@ -62,7 +62,7 @@ struct language_model_ngram {
 
 template <class t_itr>
 std::tuple<dynet::Expression, size_t>
-build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,corpus_t& corpus,t_itr& start, t_itr& end,double drop_out)
+build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,corpus_t& corpus,t_itr& start, t_itr& end)
 {
     size_t batch_size = std::distance(start, end);
     size_t sentence_len = start->sentence.size();
@@ -128,7 +128,7 @@ evaluate_pplx(language_model_ngram& lm, const corpus_t& corpus, std::string file
     }
     for (size_t i = 0; i < test_corpus.num_sentences; i++) {
         dynet::ComputationGraph cg;
-        auto loss_expr = build_train_graph_ngram(lm, cg, sents.begin() + i, sents.begin() + i + 1);
+        auto loss_expr = build_train_graph_ngram(lm, cg,corpus, sents.begin() + i, sents.begin() + i + 1);
         loss += dynet::as_scalar(cg.forward(loss_expr));
         predictions += sents[i].size() - 1;
         ++show_progress;
@@ -214,7 +214,7 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
 
             dynet::ComputationGraph cg;
             auto train_start = std::chrono::high_resolution_clock::now();
-            auto loss_tuple = build_train_graph_ngram(lm,cg, itr, batch_end,drop_out);
+            auto loss_tuple = build_train_graph_ngram(lm,cg,corpus, itr, batch_end);
             auto loss_expr = std::get<0>(loss_tuple);
             auto num_predictions = std::get<1>(loss_tuple);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
