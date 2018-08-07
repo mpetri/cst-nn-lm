@@ -129,8 +129,11 @@ evaluate_pplx(language_model_ngram& lm, const corpus_t& corpus, std::string file
     for (size_t i = 0; i < test_corpus.num_sentences; i++) {
         dynet::ComputationGraph cg;
         auto loss_expr = build_train_graph_ngram(lm, cg,corpus, sents.begin() + i, sents.begin() + i + 1);
-        loss += dynet::as_scalar(cg.forward(loss_expr));
-        predictions += sents[i].size() - 1;
+        auto loss_expr = std::get<0>(loss_tuple);
+        auto num_predictions = std::get<1>(loss_tuple);
+        auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
+        loss += loss_float;
+        predictions += num_predictions;
         ++show_progress;
     }
     return exp(loss / predictions);
