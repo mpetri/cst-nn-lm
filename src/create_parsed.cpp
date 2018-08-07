@@ -57,7 +57,8 @@ int main(int argc, char** argv)
     auto test_corpus = data_loader::parse_file(corpus.vocab, test_corpus_file);
 
     CNLOG << "store parsed data";
-    corpus.store_parsed(args["opath"],dev_corpus,test_corpus);
+    auto out_path = args["opath"].as<std::string>()
+    corpus.store_parsed(out_path,dev_corpus,test_corpus);
 
     return 0;
 }
