@@ -142,9 +142,11 @@ struct vocab_t {
         }
         return s + ">";
     }
+
 };
 
 struct corpus_t {
+    std::stirng path;
     std::string file;
     vocab_t vocab;
     sdsl::int_vector<32> sent_starts;
@@ -177,6 +179,52 @@ struct corpus_t {
         sdsl::load(sent_starts,ifs);
         sdsl::load(sent_lens,ifs);
         sdsl::load(text,ifs);
+    }
+
+    void store_parsed(std::string output_dir) {
+        if (!boost::filesystem::is_directory(output_dir) || !boost::filesystem::exists(output_dir)) {
+            boost::filesystem::create_directory(output_dir); 
+        }
+
+        {
+            std::ofstream train_out(output_dir+"/train.txt");
+            for(size_t i=0;i<num_sentences;i++) {
+                auto start = sent_starts[i];
+                auto len = sent_lens[i];
+                for(size_t j=0;j<len;j++) {
+                    train_out << vocab.inverse_lookup(text[start+i]);
+                }
+                train_out << "\n";
+            }
+        }
+
+        {
+            auto valid_file = path + "/valid.txt";
+            auto valid_corpus = data_loader::parse_file(corpus.vocab, valid_file);
+            std::ofstream valid_out(output_dir+"/valid.txt");
+            for(size_t i=0;i<valid_corpus.num_sentences;i++) {
+                auto start = valid_corpus.sent_starts[i];
+                auto len = valid_corpus.sent_lens[i];
+                for(size_t j=0;j<len;j++) {
+                    valid_out << vocab.inverse_lookup(valid_corpus.text[start+i]);
+                }
+                valid_out << "\n";
+            }
+        }
+
+        {
+            auto test_file = path + "/test.txt";
+            auto test_corpus = data_loader::parse_file(corpus.vocab, test_file);
+            std::ofstream test_out(output_dir+"/test.txt");
+            for(size_t i=0;i<test_corpus.num_sentences;i++) {
+                auto start = test_corpus.sent_starts[i];
+                auto len = test_corpus.sent_lens[i];
+                for(size_t j=0;j<len;j++) {
+                    test_out << vocab.inverse_lookup(test_corpus.text[start+i]);
+                }
+                test_out << "\n";
+            }
+        }
     }
 };
 
@@ -276,6 +324,7 @@ struct data_loader {
         auto max_num_sents = args["num_sents"].as<uint32_t>();
 
         corpus_t c;
+        c.path = directory;
         c.file = train_file;
         c.vocab = create_or_load_vocab(args);
 

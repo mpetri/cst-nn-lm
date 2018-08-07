@@ -60,3 +60,12 @@ target_link_libraries(create_lm
   divsufsort64
   )
 
+
+add_executable(create_parsed src/create_parsed.cpp)
+target_link_libraries(create_parsed
+  ${Boost_LIBRARIES}
+  dynet
+  divsufsort
+  divsufsort64
+  )
+
