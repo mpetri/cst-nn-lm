@@ -146,7 +146,7 @@ struct vocab_t {
 };
 
 struct corpus_t {
-    std::stirng path;
+    std::string path;
     std::string file;
     vocab_t vocab;
     sdsl::int_vector<32> sent_starts;
