@@ -60,7 +60,7 @@ struct language_model_ngram {
 };
 
 template <class t_itr>
-std::tuple<dynet::Expression, size_t> 
+std::tuple<dynet::Expression, size_t>
 build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,corpus_t& corpus,t_itr& start, t_itr& end,double drop_out)
 {
     size_t batch_size = std::distance(start, end);
@@ -112,6 +112,29 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,cor
     return std::make_tuple(sum_batches(sum(errs)), errs.size()*batch_size);
 }
 
+
+double
+evaluate_pplx(language_model& lm, const corpus_t& corpus, std::string file)
+{
+    double loss = 0.0;
+    double predictions = 0;
+    auto test_corpus = data_loader::parse_file(corpus.vocab, file);
+    boost::progress_display show_progress(test_corpus.num_sentences);
+    std::vector< std::vector<uint32_t> > sents;
+    for (size_t i = 0; i < test_corpus.num_sentences; i++) {
+        auto start_sent = test_corpus.text.begin() + test_corpus.sent_starts[i];
+        auto sent_len = test_corpus.sent_lens[i];
+        sents.emplace_back(start_sent,start_sent+sent_len);
+    }
+    for (size_t i = 0; i < test_corpus.num_sentences; i++) {
+        dynet::ComputationGraph cg;
+        auto loss_expr = build_train_graph_ngram(lm, cg, sents + i, sents + i + 1);
+        loss += dynet::as_scalar(cg.forward(loss_expr));
+        predictions += sent_len - 1;
+        ++show_progress;
+    }
+    return exp(loss / predictions);
+}
 
 template<class t_trainer>
 void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t& args,t_trainer& trainer)
@@ -191,7 +214,7 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
 
             dynet::ComputationGraph cg;
             auto train_start = std::chrono::high_resolution_clock::now();
-            auto loss_tuple = build_train_graph_dynet(lm,cg, itr, batch_end,drop_out);
+            auto loss_tuple = build_train_graph_ngram(lm,cg, itr, batch_end,drop_out);
             auto loss_expr = std::get<0>(loss_tuple);
             auto num_predictions = std::get<1>(loss_tuple);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
