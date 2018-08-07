@@ -11,6 +11,7 @@
 #include "dynet/training.h"
 #include <dynet/io.h>
 
+#include <boost/progress.hpp>
 
 struct language_model_ngram {
     dynet::ParameterCollection model;
@@ -130,7 +131,7 @@ evaluate_pplx(language_model_ngram& lm, const corpus_t& corpus, std::string file
         dynet::ComputationGraph cg;
         auto loss_expr = build_train_graph_ngram(lm, cg, sents + i, sents + i + 1);
         loss += dynet::as_scalar(cg.forward(loss_expr));
-        predictions += sent_len - 1;
+        predictions += sents[i].size() - 1;
         ++show_progress;
     }
     return exp(loss / predictions);
