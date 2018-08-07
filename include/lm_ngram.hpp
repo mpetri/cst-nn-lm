@@ -43,6 +43,20 @@ struct language_model_ngram {
         p_bias = model.add_parameters({ HIDDEN_DIM });
     }
 
+    void store(std::string file_name) {
+        dynet::TextFileSaver s(file_name);
+        s.save(model);
+    }
+
+    void load(std::string file_name) {
+        if (boost::filesystem::exists(file_name)) {
+            dynet::TextFileLoader l(file_name);
+            l.populate(model);
+        } else {
+            CNLOG << "ERROR: model file " << file_name << " does not exist.";
+        }
+    }
+
 };
 
 template <class t_itr>
@@ -95,7 +109,7 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,cor
         ++ctx_end;
     }
     // Add all errors
-    return std::make_tuple(sum_batches(sum(errs)), actual_predictions);
+    return std::make_tuple(sum_batches(sum(errs)), errs.size()*batch_size);
 }
 
 
