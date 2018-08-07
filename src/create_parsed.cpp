@@ -8,8 +8,6 @@
 
 #include "logging.hpp"
 
-#include "lm_dynet.hpp"
-#include "lm_cst_sent.hpp"
 
 namespace po = boost::program_options;
 
@@ -22,7 +20,7 @@ po::variables_map parse_args(int argc, char** argv)
         ("path", po::value<std::string>()->required(), "data path")
         ("opath", po::value<std::string>()->required(), "output data path")
         ("num_sents", po::value<uint32_t>()->default_value(defaults::MAX_NUM_SENTS), "number of sentences to train on. (prefix)")
-        ("vocab_size", po::value<uint32_t>()->default_value(defaults::VOCAB_SIZE), "vocab size")
+        ("vocab_size", po::value<uint32_t>()->default_value(defaults::VOCAB_SIZE), "vocab size");
     // clang-format on
 
     po::variables_map args;
