@@ -52,7 +52,7 @@ po::variables_map parse_args(int argc, char** argv)
     }
 
     CNLOG << "extract dynet cmdline parameters";
-    DynetParams params = dynet::extract_dynet_params(argc, argv);
+    dynet::DynetParams params = dynet::extract_dynet_params(argc, argv);
     params.random_seed = constants::RAND_SEED;
     dynet::initialize(params);
 
@@ -76,7 +76,7 @@ int main(int argc, char** argv)
         auto lm_file_path = args["load"].as<std::string>();
         CNLOG << "load language model from " << lm_file_path;
         lm.load(lm_file_path);
-    } 
+    }
 
     dynet::Trainer* trainer = nullptr;
     double learning_rate = args["lr"].as<double>();
@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     } else {
         trainer = new dynet::AdamTrainer(lm.model, learning_rate, 0.9, 0.999, 1e-8);
     }
-    
+
     if(args.count("test") == 0) {
         CNLOG << "create language model";
 
