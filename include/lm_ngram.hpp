@@ -79,9 +79,9 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,cor
     // create a vector of dynet expressions and fill with
     // padding for the first few computations
     std::vector<uint32_t> padding_tok(batch_size, corpus.vocab.eof_tok);
-    std::vector< dynet::Expression > context(sentence_len + lm.NGRAM_SIZE);
-    for(size_t i=0;i<lm.NGRAM_SIZE;i++)
-        context[i] = dynet::lookup(cg, lm.p_c, padding_tok);
+    std::vector< dynet::Expression > context;
+    for(size_t i=0;i<lm.NGRAM_SIZE-1;i++)
+        context.push_back(dynet::lookup(cg, lm.p_c, padding_tok));
     auto ctx_start = context.begin();
     auto ctx_end = context.begin() + lm.NGRAM_SIZE - 1;
 
@@ -92,12 +92,10 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,cor
         }
 
         // Embed the current tokens
-        *ctx_end = dynet::lookup(cg, lm.p_c, current_tok);
+        context.push_back(dynet::lookup(cg, lm.p_c, current_tok));
 
         // Concact with the previous ngram-size-1 toks
-        auto i_x_t = dynet::concatenate({ctx_start,ctx_start+1});
-        for(size_t j=2;j<lm.NGRAM_SIZE;j++)
-            i_x_t = dynet::concatenate({i_x_t,ctx_start+j});
+        auto i_x_t = dynet::concatenate(context);
 
         // Project to the token space using an affine transform
         auto i_r_t = dynet::rectify(lm.i_bias + lm.i_R * i_x_t);
@@ -108,8 +106,7 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,cor
 
         // Change input tok and the context for the next prediction
         current_tok = next_tok;
-        ++ctx_start;
-        ++ctx_end;
+        context.erase(context.begin());
     }
     // Add all errors
     return std::make_tuple(dynet::sum_batches(dynet::sum(errs)), errs.size()*batch_size);
