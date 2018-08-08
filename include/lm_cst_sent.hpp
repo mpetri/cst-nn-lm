@@ -676,8 +676,6 @@ void train_cst_sent_seq(language_model& lm,const corpus_t& corpus, args_t& args,
         }
     }
 
-    total_loss = 0;
-    total_predictions = 0;
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
         std::shuffle(sbatch_ids.begin(),sbatch_ids.end(), rng);
