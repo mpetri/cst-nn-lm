@@ -367,9 +367,8 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
         std::shuffle(batch_ids.begin(),batch_ids.end(), rng);
 
-        double total_predictions = 0;
-        double total_loss = 0;
-
+        std::vector<float> window_loss(20);
+        std::vector<float> window_predictions(20);
         size_t last_report = 0;
         for(size_t i=0;i<batch_ids.size();i++) {
             auto train_start = std::chrono::high_resolution_clock::now();
@@ -410,11 +409,13 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             auto train_stop = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> train_diff = train_stop - train_start;
             auto time_per_instance = train_diff.count() / num_predictions * 1000.0;
-            total_loss += loss_float;
-            total_predictions += num_predictions;
+            window_loss[i%window_loss.size()] = loss_float;
+            window_predictions[i%window_loss.size()] = num_predictions;
 
             if ( int64_t(i-last_report) >= report_interval || i+1 == batch_ids.size()) {
                 double percent = double(i) / double(batch_ids.size()) * 100;
+                float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
+                float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
                 last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << (i+1) << "/" << batch_ids.size()
@@ -423,7 +424,7 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " ABSTIME = "<< train_diff.count()* 1000.0 << "ms"
                       << " ppl = " << exp(instance_loss)
-                      << " avg-ppl = " << exp(total_loss / total_predictions);
+                      << " avg-ppl = " << exp(wloss / wpred);
             }
         }
 
@@ -484,8 +485,9 @@ void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus,
         std::shuffle(sbatch_ids.begin(),sbatch_ids.end(), rng);
 
         size_t last_report = 0;
-        double total_predictions = 0;
-        double total_loss = 0;
+
+        std::vector<float> window_loss(20);
+        std::vector<float> window_predictions(20);
         for(size_t i=0;i<pbatch_ids.size();i++) {
             auto train_start = std::chrono::high_resolution_clock::now();
             auto cur_batch_id = pbatch_ids[i];
@@ -513,11 +515,14 @@ void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus,
             auto train_stop = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> train_diff = train_stop - train_start;
             auto time_per_instance = train_diff.count() / num_predictions * 1000.0;
-            total_predictions += num_predictions;
-            total_loss += loss_float;
+            window_loss[i%window_loss.size()] = loss_float;
+            window_predictions[i%window_loss.size()] = num_predictions;
+
 
             if ( int64_t(i-last_report) >= report_interval || i+1 == pbatch_ids.size()) {
                 double percent = double(i) / double(pbatch_ids.size()) * 100;
+                float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
+                float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
                 last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << (i+1) << "/" << pbatch_ids.size()
@@ -525,7 +530,7 @@ void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus,
                       << " batch_size = " << num_predictions
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " ppl = " << exp(instance_loss)
-                      << " avg-ppl = " << exp(total_loss / total_predictions);
+                      << " avg-ppl = " << exp(wloss / wpred);
             }
         }
 
@@ -545,6 +550,8 @@ void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus,
             loss_float = dynet::as_scalar(cg.forward(loss));
             cg.backward(loss);
             trainer.update();
+            window_loss[i%window_loss.size()] = loss_float;
+            window_predictions[i%window_loss.size()] = num_predictions;
 
             auto instance_loss = loss_float / num_predictions;
             auto train_stop = std::chrono::high_resolution_clock::now();
@@ -553,6 +560,8 @@ void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus,
 
             if ( int64_t(i-last_report) >= report_interval || i+1 == sbatch_ids.size()) {
                 double percent = double(i) / double(sbatch_ids.size()) * 100;
+                float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
+                float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
                 last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << (i+1) << "/" << sbatch_ids.size()
@@ -560,7 +569,7 @@ void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus,
                       << " batch_size = " << num_predictions
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " ppl = " << exp(instance_loss)
-                      << " avg-ppl = " << exp(total_loss / total_predictions);
+                      << " avg-ppl = " << exp(wloss / wpred);
             }
         }
 
@@ -616,8 +625,8 @@ void train_cst_sent_seq(language_model& lm,const corpus_t& corpus, args_t& args,
     std::sort(prefix_batches.begin(),prefix_batches.end());
     double best_pplx = std::numeric_limits<double>::max();
 
-    double total_loss = 0;
-    double total_predictions = 0;
+    std::vector<float> window_loss(20);
+    std::vector<float> window_predictions(20);
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
 
@@ -648,10 +657,12 @@ void train_cst_sent_seq(language_model& lm,const corpus_t& corpus, args_t& args,
             auto train_stop = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> train_diff = train_stop - train_start;
             auto time_per_instance = train_diff.count() / num_predictions * 1000.0;
-            total_loss += loss_float;
-            total_predictions += num_predictions;
+            window_loss[i%window_loss.size()] = loss_float;
+            window_predictions[i%window_loss.size()] = num_predictions;
 
             if ( int64_t(i-last_report) >= report_interval || i+1 == pbatch_ids.size()) {
+                float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
+                float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
                 double percent = double(i) / double(pbatch_ids.size()) * 100;
                 last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
@@ -660,7 +671,7 @@ void train_cst_sent_seq(language_model& lm,const corpus_t& corpus, args_t& args,
                       << " batch_size = " << num_predictions
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " ppl = " << exp(instance_loss)
-                      << " avg-ppl = " << exp(total_loss / total_predictions);
+                      << " avg-ppl = " << exp(wloss / wpred);
             }
         }
     }
@@ -691,11 +702,13 @@ void train_cst_sent_seq(language_model& lm,const corpus_t& corpus, args_t& args,
             auto train_stop = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> train_diff = train_stop - train_start;
             auto time_per_instance = train_diff.count() / num_predictions * 1000.0;
-            total_loss += loss_float;
-            total_predictions += num_predictions;
+            window_loss[i%window_loss.size()] = loss_float;
+            window_predictions[i%window_loss.size()] = num_predictions;
 
             if ( int64_t(i-last_report) >= report_interval || i+1 == sbatch_ids.size()) {
                 double percent = double(i) / double(sbatch_ids.size()) * 100;
+                float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
+                float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
                 last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << (i+1) << "/" << sbatch_ids.size()
@@ -703,7 +716,7 @@ void train_cst_sent_seq(language_model& lm,const corpus_t& corpus, args_t& args,
                       << " batch_size = " << num_predictions
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " ppl = " << exp(instance_loss)
-                      << " avg-ppl = " << exp(total_loss / total_predictions);
+                      << " avg-ppl = " << exp(wloss / wpred);
             }
         }
 
