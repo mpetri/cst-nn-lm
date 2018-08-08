@@ -45,7 +45,7 @@ struct language_model_ngram {
 
         // Add embedding parameters to the model
         p_c = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
-        p_R = model.add_parameters({ INPUT_DIM*NGRAM_SIZE, HIDDEN_DIM });
+        p_R = model.add_parameters({ HIDDEN_DIM,INPUT_DIM*NGRAM_SIZE });
         p_O = model.add_parameters({ VOCAB_SIZE, HIDDEN_DIM });
         p_bias = model.add_parameters({ HIDDEN_DIM });
         p_bias_O = model.add_parameters({ VOCAB_SIZE });
