@@ -188,6 +188,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             total_predictions += num_predictions;
             auto instance_loss = loss_float / num_predictions;
             cg.backward(loss_expr);
+            cg.get_gradient(i_y_t[i]);
             trainer.update();
             itr = batch_end;
             auto train_end = std::chrono::high_resolution_clock::now();

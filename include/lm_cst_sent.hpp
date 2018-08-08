@@ -295,6 +295,9 @@ build_train_graph_sents(language_model& lm,dynet::ComputationGraph& cg,one_hot_b
         auto i_x_t = dynet::lookup(cg, lm.p_c, cur_tok);
         i_y_t = lm.rnn.add_input(i_x_t);
     }
+    
+
+
     for (size_t i = 0; i < batch.suffix.size()-1; ++i) {
         auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
         auto i_err = dynet::pickneglogsoftmax(i_r_t, batch.suffix[i]);
@@ -493,6 +496,8 @@ void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus,
             float loss_float;
             std::string batch_type = "P";
             auto& cur_batch = prefix_batches[cur_batch_id];
+            trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
+
             compute_dist(cur_batch,cst,corpus);
 
             std::tie(loss,num_predictions) = build_train_graph_prefix(lm,cg,cur_batch,drop_out);
@@ -535,6 +540,7 @@ void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus,
             float loss_float;
             std::string batch_type = "S";
             auto& cur_batch = one_hot_batches[cur_batch_id];
+            trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
             std::tie(loss,num_predictions) = build_train_graph_sents(lm,cg,cur_batch,drop_out);
             loss_float = dynet::as_scalar(cg.forward(loss));
             cg.backward(loss);
@@ -626,6 +632,7 @@ void train_cst_sent_seq(language_model& lm,const corpus_t& corpus, args_t& args,
             float loss_float;
             std::string batch_type = "P";
             auto& cur_batch = prefix_batches[cur_batch_id];
+            trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
             compute_dist(cur_batch,cst,corpus);
 
             std::tie(loss,num_predictions) = build_train_graph_prefix(lm,cg,cur_batch,drop_out);
@@ -674,6 +681,7 @@ void train_cst_sent_seq(language_model& lm,const corpus_t& corpus, args_t& args,
             float loss_float;
             std::string batch_type = "S";
             auto& cur_batch = one_hot_batches[cur_batch_id];
+            trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
             std::tie(loss,num_predictions) = build_train_graph_sents(lm,cg,cur_batch,drop_out);
             loss_float = dynet::as_scalar(cg.forward(loss));
             cg.backward(loss);

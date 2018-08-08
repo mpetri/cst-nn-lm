@@ -108,6 +108,7 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
         // Project to the token space using an affine transform
         auto i_r_t = dynet::rectify(lm.i_bias + lm.i_R * i_x_t);
 
+        // back to vocab space
         auto i_y_t = lm.i_bias_O + lm.i_O * i_r_t;
 
         // Compute error for each member of the batch
