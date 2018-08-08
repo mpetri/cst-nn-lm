@@ -379,13 +379,10 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             dynet::ComputationGraph cg;
             float loss_float;
             std::string batch_type = "S";
-            std::string batch_size;
             if(cur_batch_id >= prefix_batches.size()) {
                 auto& cur_batch = one_hot_batches[cur_batch_id-prefix_batches.size()];
                 trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
                 std::tie(loss,num_predictions) = build_train_graph_sents(lm,cg,cur_batch,drop_out);
-                batch_size = "<" + std::to_string(num_predictions) + "," + std::to_string(cur_batch.size)
-                    + "," + std::to_string(cur_batch.prefix.size())  + "," + std::to_string(cur_batch.suffix.size()) + ">";
                 loss_float = dynet::as_scalar(cg.forward(loss));
                 cg.backward(loss);
                 trainer.update();
@@ -396,8 +393,6 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
 
                 trainer.clip_threshold = trainer.clip_threshold * cur_batch.size;
                 std::tie(loss,num_predictions) = build_train_graph_prefix(lm,cg,cur_batch,drop_out);
-                batch_size = "<" + std::to_string(num_predictions) + "," + std::to_string(cur_batch.size)
-                    + "," + std::to_string(cur_batch.prefix.size()) + ">";
                 loss_float = dynet::as_scalar(cg.forward(loss));
                 cg.backward(loss);
                 trainer.update();
@@ -420,7 +415,7 @@ void train_cst_sent(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << (i+1) << "/" << batch_ids.size()
                       << " batch_type = " << batch_type
-                      << " batch_size = " << batch_size
+                      << " num_predictions = " << num_predictions
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " ABSTIME = "<< train_diff.count()* 1000.0 << "ms"
                       << " ppl = " << exp(instance_loss)
@@ -527,7 +522,7 @@ void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus,
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << (i+1) << "/" << pbatch_ids.size()
                       << " batch_type = " << batch_type
-                      << " batch_size = " << num_predictions
+                      << " num_predictions = " << num_predictions
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " ppl = " << exp(instance_loss)
                       << " avg-ppl = " << exp(wloss / wpred);
@@ -566,7 +561,7 @@ void train_cst_sent_prefix_first_sort(language_model& lm,const corpus_t& corpus,
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << (i+1) << "/" << sbatch_ids.size()
                       << " batch_type = " << batch_type
-                      << " batch_size = " << num_predictions
+                      << " num_predictions = " << num_predictions
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " ppl = " << exp(instance_loss)
                       << " avg-ppl = " << exp(wloss / wpred);
@@ -668,7 +663,7 @@ void train_cst_sent_seq(language_model& lm,const corpus_t& corpus, args_t& args,
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << (i+1) << "/" << pbatch_ids.size()
                       << " batch_type = " << batch_type
-                      << " batch_size = " << num_predictions
+                      << " num_predictions = " << num_predictions
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " ppl = " << exp(instance_loss)
                       << " avg-ppl = " << exp(wloss / wpred);
@@ -711,7 +706,7 @@ void train_cst_sent_seq(language_model& lm,const corpus_t& corpus, args_t& args,
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << (i+1) << "/" << sbatch_ids.size()
                       << " batch_type = " << batch_type
-                      << " batch_size = " << num_predictions
+                      << " num_predictions = " << num_predictions
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " ppl = " << exp(instance_loss)
                       << " avg-ppl = " << exp(wloss / wpred);

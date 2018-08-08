@@ -244,8 +244,8 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
         auto last_report = sentences.begin();
         auto itr = sentences.begin();
         auto end = sentences.end();
-        double total_predictions = 0;
-        double total_loss = 0;
+        std::vector<float> window_loss(20);
+        std::vector<float> window_predictions(20);
         while (itr != end) {
             auto batch_end = itr + std::min(batch_size,size_t(std::distance(itr,end)));
             auto actual_batch_size = std::distance(itr,batch_end);
@@ -256,8 +256,8 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
             auto loss_expr = std::get<0>(loss_tuple);
             auto num_predictions = std::get<1>(loss_tuple);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
-            total_loss += loss_float;
-            total_predictions += num_predictions;
+            window_loss[std::distance(start, itr)%window_loss.size()] = loss_float;
+            window_predictions[std::distance(start, itr)%window_loss.size()] = num_predictions;
             auto instance_loss = loss_float / num_predictions;
             cg.backward(loss_expr);
             trainer.update();
@@ -268,6 +268,8 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
 
             if (std::distance(last_report, itr) >= report_interval || batch_end == end) {
                 double percent = double(std::distance(start, itr)) / double(sentences.size()) * 100;
+                float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
+                float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
                 last_report = itr;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << std::distance(start, itr) << "/" << sentences.size()
@@ -275,7 +277,7 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " num_predictions = " << num_predictions
                       << " ppl = " << exp(instance_loss)
-                      << " avg-ppl = " << exp(total_loss / total_predictions);
+                      << " avg-ppl = " << exp(wloss / wpred);
             }
         }
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
