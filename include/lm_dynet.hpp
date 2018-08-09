@@ -178,6 +178,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
         auto last_report = 0;
         std::vector<float> window_loss(20);
         std::vector<float> window_predictions(20);
+        size_t next_dev = 100;
         for (size_t i = 0; i < batch_start.size(); i++) {
             auto batch_itr = sentences.begin() + batch_start[i].first;
             auto batch_end = batch_itr + batch_start[i].second;
@@ -227,11 +228,17 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
                       << " ppl = " << exp(instance_loss)
                       << " avg-ppl = " << exp(wloss / wpred);
             }
+
+            if(i == next_dev) {
+                auto pplx = evaluate_pplx(lm, corpus, dev_corpus_file);
+                CNLOG << "epoch " << epoch << ". processed " i+1 << " batches. evaluate dev pplx = " << pplx;
+                next_dev = next_dev * 10;
+            }
         }
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
-
         auto pplx = evaluate_pplx(lm, corpus, dev_corpus_file);
         CNLOG << "epoch " << epoch << " dev pplx = " << pplx;
+
 
         if( pplx < best_pplx && args.count("store") ) {
             CNLOG << "better dev pplx. store model";
