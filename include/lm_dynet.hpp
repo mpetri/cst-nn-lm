@@ -49,6 +49,15 @@ struct instance_t {
     }
 };
 
+double l2_norm(const std::vector<float>& u) {
+    size_t n = u.size();
+    double accum = 0.;
+    for (int i = 0; i < n; ++i) {
+        accum += u[i] * u[i];
+    }
+    return sqrt(accum);
+}
+
 template <class t_itr>
 std::tuple<dynet::Expression, size_t> 
 build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const corpus_t& corpus, t_itr& start, t_itr& end,double drop_out)
@@ -98,7 +107,8 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
         auto i_err = dynet::pickneglogsoftmax(i_r_t, next_tok);
 
         auto grad = dynet::get_gradient(i_err);
-        CNLOG << "GRAD AT " << i << ": " << grad;
+        auto vec = grad.as_vector();
+        CNLOG << "GRAD AT " << i << ": " << l2_norm(vec);
 
         errs.push_back(i_err);
         // Change input
