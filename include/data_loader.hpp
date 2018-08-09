@@ -254,7 +254,6 @@ struct data_loader {
         input.imbue(std::locale("en_US.UTF-8"));
         for (std::string line; std::getline(input, line);) {
             auto toks = tokenize_line(line);
-            if(toks.size() > constants::MAX_SENTENCE_LEN) continue;
             for (const auto& tok : toks)
                 v.add_token(tok);
         }
@@ -282,7 +281,7 @@ struct data_loader {
 
         for (std::string line; std::getline(input, line);) {
             auto toks = tokenize_line(line);
-            if(toks.size() > constants::MAX_SENTENCE_LEN) continue;
+            if(dedup && toks.size() > constants::MAX_SENTENCE_LEN) continue;
 
             std::vector<uint32_t> sentence;
             sentence.push_back(corpus.vocab.start_sent_tok);

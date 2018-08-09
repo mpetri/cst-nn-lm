@@ -16,6 +16,6 @@ double DROP_OUT = 0.5;
 }
 
 namespace constants {
-size_t MAX_SENTENCE_LEN = 64;
+size_t MAX_SENTENCE_LEN = 128;
 size_t RAND_SEED = 12345;
 }
