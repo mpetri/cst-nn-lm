@@ -8,8 +8,7 @@
 
 #include "logging.hpp"
 
-#include "lm_dynet.hpp"
-#include "lm_cst_sent.hpp"
+#include "lm_types.hpp"
 
 namespace po = boost::program_options;
 
@@ -95,23 +94,17 @@ int main(int argc, char** argv)
     if(args.count("test") == 0) {
         CNLOG << "create language model";
 
-        if(lm_type == "standard") {
+        if(lm_type == "one_hot") {
             train_dynet_lm(lm,corpus, args,*trainer);
-        } else if(lm_type == "cst_sent") {
-            train_cst_sent(lm,corpus, args,*trainer);
+        } else if(lm_type == "cst_rand") {
+            train_cst_rand(lm,corpus, args,*trainer);
         } else if(lm_type == "cst_sent_pfirst_sort") {
-            train_cst_sent_prefix_first_sort(lm,corpus, args,*trainer);
+            train_cst_sent_prefix_first(lm,corpus, args,*trainer);
         } else if(lm_type == "cst_sent_seq") {
             train_cst_sent_seq(lm,corpus, args,*trainer);
         } else {
             CNLOG << "ERROR: incorrect lm type. options are: standard, cst_sent, cst_sent_pfirst, cst_sent_seq";
             exit(EXIT_FAILURE);
-        }
-
-        if( args.count("store") ) {
-            auto lm_file_path = args["store"].as<std::string>();
-            CNLOG << "store language model to " << lm_file_path;
-            lm.store(lm_file_path);
         }
     }
 
