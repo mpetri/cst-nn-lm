@@ -209,10 +209,10 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
                 auto vec = dynet::as_vector(grad);
             }
 
-            auto hidden_expr = std::get<3>(loss_tuple);
-            auto loss_expr = std::get<2>(loss_tuple);
+            auto hidden_vec = std::get<3>(loss_tuple);
+            auto loss_vec = std::get<2>(loss_tuple);
             for(size_t i=0;i<hidden_expr.size();i++) {
-                auto& e = loss_expr[i];
+                auto& e = loss_vec[i];
                 cg.backward(e);
                 for (size_t j=0;j<=i;j++) {
                     auto& hj = hidden_expr[j];
