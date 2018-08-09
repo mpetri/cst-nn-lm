@@ -89,7 +89,7 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
 
     for (size_t j = 0; j < batch_size; j++) {
         auto instance = start + j;
-        CNLOG << corputs.vocab.print_sentence(instance->sentence);
+        CNLOG << corpus.vocab.print_sentence(instance->sentence);
     }
     for (size_t i = 0; i < sentence_len - 1; ++i) {
         for (size_t j = 0; j < batch_size; j++) {
@@ -107,7 +107,7 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
         auto i_err = dynet::pickneglogsoftmax(i_r_t, next_tok);
 
         auto grad = cg.get_gradient(i_err);
-        auto vec = grad.as_vector();
+        auto vec = dynet::as_vector(grad);
         CNLOG << "GRAD AT " << i << ": " << l2_norm(vec);
 
         errs.push_back(i_err);
@@ -198,7 +198,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
 
             dynet::ComputationGraph cg;
             auto train_start = std::chrono::high_resolution_clock::now();
-            auto loss_tuple = build_train_graph_dynet(lm,cg, itr, batch_end,drop_out);
+            auto loss_tuple = build_train_graph_dynet(lm,cg,corpus, itr, batch_end,drop_out);
             auto loss_expr = std::get<0>(loss_tuple);
             auto num_predictions = std::get<1>(loss_tuple);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
