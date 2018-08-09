@@ -231,7 +231,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
                 }
             }
 
-            if(i == next_dev) {
+            if( (i+1) == next_dev) {
                 CNLOG << "evalute dev pplx";
                 auto pplx = evaluate_pplx(lm, corpus, dev_corpus_file);
                 CNLOG << "epoch " << epoch << ". processed " << i+1 << " batches. evaluate dev pplx = " << pplx;
