@@ -52,14 +52,14 @@ struct instance_t {
 double l2_norm(const std::vector<float>& u) {
     size_t n = u.size();
     double accum = 0.;
-    for (int i = 0; i < n; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         accum += u[i] * u[i];
     }
     return sqrt(accum);
 }
 
 template <class t_itr>
-std::tuple<dynet::Expression, size_t> 
+std::tuple<dynet::Expression, size_t,std::vector<dynet::Expression>> 
 build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const corpus_t& corpus, t_itr& start, t_itr& end,double drop_out)
 {
     size_t batch_size = std::distance(start, end);
@@ -74,7 +74,7 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
     lm.i_R = dynet::parameter(cg, lm.p_R);
     lm.i_bias = dynet::parameter(cg, lm.p_bias);
 
-    std::vector<Expression> errs;
+    std::vector<dynet::Expression> errs;
     // Set all inputs to the SOS symbol
     auto sos_tok = start->sentence.front();
     std::vector<uint32_t> current_tok(batch_size, sos_tok);
@@ -106,16 +106,12 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
         // Compute error for each member of the batch
         auto i_err = dynet::pickneglogsoftmax(i_r_t, next_tok);
 
-        auto grad = cg.get_gradient(i_err);
-        auto vec = dynet::as_vector(grad);
-        CNLOG << "GRAD AT " << i << ": " << l2_norm(vec);
-
         errs.push_back(i_err);
         // Change input
         current_tok = next_tok;
     }
     // Add all errors
-    return std::make_tuple(sum_batches(sum(errs)), actual_predictions);
+    return std::make_tuple(sum_batches(sum(errs)), actual_predictions , errs);
 }
 
 template<class t_trainer>
@@ -206,6 +202,15 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             window_predictions[std::distance(start, itr)%window_loss.size()] = num_predictions;
             auto instance_loss = loss_float / num_predictions;
             cg.backward(loss_expr);
+
+            auto error_expr = std::get<2>(loss_tuple);
+            for(size_t i=0;i<actual_batch_size;i++) {
+                auto grad = cg.get_gradient(error_expr[i]);
+                auto vec = dynet::as_vector(grad);
+                CNLOG << "GRAD AT " << i << ": " << l2_norm(vec);
+            }
+        
+        
             trainer.update();
             itr = batch_end;
             auto train_end = std::chrono::high_resolution_clock::now();
