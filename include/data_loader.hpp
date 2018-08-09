@@ -183,7 +183,7 @@ struct corpus_t {
 
     void store_parsed(std::string output_dir,corpus_t& valid_corpus,corpus_t& test_corpus) {
         if (!boost::filesystem::is_directory(output_dir) || !boost::filesystem::exists(output_dir)) {
-            boost::filesystem::create_directory(output_dir); 
+            boost::filesystem::create_directory(output_dir);
         }
 
         {
@@ -271,7 +271,7 @@ struct data_loader {
         return hash;
     }
 
-    static void parse_text(corpus_t& corpus)
+    static void parse_text(corpus_t& corpus, bool dedup = true)
     {
         CNLOG << "\tparse text " << corpus.file;
         auto train_file = corpus.file;
@@ -294,18 +294,27 @@ struct data_loader {
                 }
             }
             sentence.push_back(corpus.vocab.stop_sent_tok);
-            auto shash = hash_sentence(sentence);
-            if(sentence_filter.find(shash) == sentence_filter.end()) {
-                sentence_filter.insert(shash);
-                corpus.sent_starts.push_back(corpus.text.size());
-                for(auto& tok : sentence) {
-                    corpus.text.push_back(tok);
+            if(dedup) {
+                auto shash = hash_sentence(sentence);
+                if(sentence_filter.find(shash) == sentence_filter.end()) {
+                    sentence_filter.insert(shash);
+                    corpus.sent_starts.push_back(corpus.text.size());
+                    for(auto& tok : sentence) {
+                        corpus.text.push_back(tok);
+                    }
+                    corpus.num_oov += num_oov;
+                    corpus.num_sentences++;
+                    corpus.sent_lens.push_back(sentence.size());
+                } else {
+                    corpus.num_duplicates++;
                 }
-                corpus.num_oov += num_oov;
-                corpus.num_sentences++;
-                corpus.sent_lens.push_back(sentence.size());
             } else {
-                corpus.num_duplicates++;
+                    corpus.sent_starts.push_back(corpus.text.size());
+                    for(auto& tok : sentence) {
+                        corpus.text.push_back(tok);
+                    }
+                    corpus.num_oov += num_oov;
+                    corpus.num_sentences++;
             }
         }
         corpus.num_tokens = corpus.text.size();
@@ -346,12 +355,12 @@ struct data_loader {
         return c;
     }
 
-    static corpus_t parse_file(const vocab_t& vocab, std::string file)
+    static corpus_t parse_file(const vocab_t& vocab, std::string file, bool dedup = true)
     {
         corpus_t c;
         c.file = file;
         c.vocab = vocab;
-        parse_text(c);
+        parse_text(c,dedup);
         CNLOG << "\t\tnum tokens = " << c.num_tokens;
         CNLOG << "\t\tnum sentences = " << c.num_sentences;
         CNLOG << "\t\tnum duplicate sentences = " << c.num_duplicates;

@@ -55,8 +55,8 @@ double l2_norm(const std::vector<float>& u) {
 }
 
 template <class t_itr>
-//std::tuple<dynet::Expression, size_t,std::vector<dynet::Expression>,std::vector<dynet::Expression>> 
-std::tuple<dynet::Expression, size_t> 
+//std::tuple<dynet::Expression, size_t,std::vector<dynet::Expression>,std::vector<dynet::Expression>>
+std::tuple<dynet::Expression, size_t>
 build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const corpus_t& corpus, t_itr& start, t_itr& end,double drop_out)
 {
     size_t batch_size = std::distance(start, end);
@@ -151,7 +151,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
     CNLOG << "add padding to instances in batch";
     std::vector< std::pair<uint32_t,uint32_t> > batch_start;
     {
-        auto padd_sym = corpus.vocab.stop_sent_tok;
+        auto padd_sym = corpus.vocab.eof_tok;
         auto start = sentences.begin();
         auto itr = sentences.begin();
         auto end = sentences.end();
@@ -195,7 +195,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             window_loss[i%window_loss.size()] = loss_float;
             window_predictions[i%window_loss.size()] = num_predictions;
             auto instance_loss = loss_float / num_predictions;
-            
+
             // auto hidden_vec = std::get<3>(loss_tuple);
             // auto loss_vec = std::get<2>(loss_tuple);
             // for(size_t i=0;i<hidden_vec.size();i++) {
@@ -209,13 +209,13 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             //     }
             // }
             //cg.backward(loss_expr);
-        
+
             trainer.update();
             auto train_end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> train_diff = train_end - train_start;
             auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
-            if ( (i-last_report) >= report_interval || i == batch_start.size() - 1) {
+            if ( int64_t(i-last_report) >= report_interval || i == batch_start.size() - 1) {
                 double percent = double(i+1) / double(batch_start.size()) * 100;
                 float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
                 float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);

@@ -295,7 +295,7 @@ build_train_graph_sents(language_model& lm,dynet::ComputationGraph& cg,one_hot_b
         auto i_x_t = dynet::lookup(cg, lm.p_c, cur_tok);
         i_y_t = lm.rnn.add_input(i_x_t);
     }
-    
+
 
 
     for (size_t i = 0; i < batch.suffix.size()-1; ++i) {
