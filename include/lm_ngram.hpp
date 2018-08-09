@@ -184,7 +184,6 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
     CNLOG << "start training ngram lm";
     CNLOG << "\tepochs = " << num_epochs;
     CNLOG << "\tbatch_size = " << batch_size;
-    CNLOG << "\tdrop_out = " << drop_out;
 
     auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
 
