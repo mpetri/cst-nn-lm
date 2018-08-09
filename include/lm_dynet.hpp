@@ -222,7 +222,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
                       << i+1 << "/" << batch_start.size()
                       << " batch_size = " << actual_batch_size
                       << " TIME = "<< time_per_instance << "ms/instance"
-                      << " slen = " << batch_itr->sentence->size()
+                      << " slen = " << batch_itr->sentence.size()
                       << " num_predictions = " << num_predictions
                       << " ppl = " << exp(instance_loss)
                       << " avg-ppl = " << exp(wloss / wpred);
