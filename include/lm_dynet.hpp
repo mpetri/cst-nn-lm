@@ -204,7 +204,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             cg.backward(loss_expr);
 
             auto error_expr = std::get<2>(loss_tuple);
-            for(size_t i=0;i<actual_batch_size;i++) {
+            for(size_t i=0;i<error_expr.size();i++) {
                 auto grad = cg.get_gradient(error_expr[i]);
                 auto vec = dynet::as_vector(grad);
                 CNLOG << "GRAD AT " << i << ": " << l2_norm(vec);
