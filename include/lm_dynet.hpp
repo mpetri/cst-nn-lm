@@ -31,12 +31,8 @@ struct instance_t {
     std::vector<uint32_t> sentence;
     size_t padding = 0;
     size_t real_len = 0;
-    size_t rand = 0;
     bool operator<(const instance_t& other) const
     {
-        if (real_len == other.real_len) {
-            return rand < other.rand;
-        }
         return real_len < other.real_len;
     }
     template <class t_itr>
@@ -59,7 +55,8 @@ double l2_norm(const std::vector<float>& u) {
 }
 
 template <class t_itr>
-std::tuple<dynet::Expression, size_t,std::vector<dynet::Expression>,std::vector<dynet::Expression>> 
+//std::tuple<dynet::Expression, size_t,std::vector<dynet::Expression>,std::vector<dynet::Expression>> 
+std::tuple<dynet::Expression, size_t> 
 build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const corpus_t& corpus, t_itr& start, t_itr& end,double drop_out)
 {
     size_t batch_size = std::distance(start, end);
@@ -74,7 +71,8 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
     lm.i_R = dynet::parameter(cg, lm.p_R);
     lm.i_bias = dynet::parameter(cg, lm.p_bias);
 
-    std::vector<dynet::Expression> errs, hidden;
+    // std::vector<dynet::Expression> errs, hidden;
+    std::vector<dynet::Expression> errs;
     // Set all inputs to the SOS symbol
     auto sos_tok = start->sentence.front();
     std::vector<uint32_t> current_tok(batch_size, sos_tok);
@@ -112,7 +110,8 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
         current_tok = next_tok;
     }
     // Add all errors
-    return std::make_tuple(sum_batches(sum(errs)), actual_predictions, errs, hidden);
+    // return std::make_tuple(sum_batches(sum(errs)), actual_predictions, errs, hidden);
+    return std::make_tuple(sum_batches(sum(errs)), actual_predictions);
 }
 
 template<class t_trainer>
@@ -145,57 +144,51 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
 
     CNLOG << "number of sentences = " << sentences.size();
     trainer.clip_threshold = trainer.clip_threshold * batch_size;
-    std::mt19937 gen(constants::RAND_SEED);
-    std::uniform_int_distribution<> dis(0,100000000);
+    std::mt19937 rng(constants::RAND_SEED);
     double best_pplx = std::numeric_limits<double>::max();
+
+    // (2) add padding to instances in the same batch if necessary
+    CNLOG << "add padding to instances in batch";
+    std::vector< std::pair<uint32_t,uint32_t> > batch_start;
+    {
+        auto padd_sym = corpus.vocab.stop_sent_tok;
+        auto start = sentences.begin();
+        auto itr = sentences.begin();
+        auto end = sentences.end();
+        while (itr != end) {
+            auto batch_itr = itr;
+            auto batch_end = batch_itr + std::min(batch_size,size_t(std::distance(itr,end))) - 1;
+            batch_start.emplace_back( (uint32_t) std::distance(start,itr) , (uint32_t) std::distance(itr,batch_end) );
+            while (batch_itr->sentence.size() != batch_end->sentence.size()) {
+                size_t to_add = batch_end->sentence.size() - batch_itr->sentence.size();
+                for (size_t i = 0; i < to_add; i++) {
+                    batch_itr->sentence.push_back(padd_sym);
+                    batch_itr->padding++;
+                }
+                ++batch_itr;
+            }
+            itr = batch_end + 1;
+        }
+    }
+
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
 
-        CNLOG << "shuffle sentences";
-        // (0) remove existing padding if necessary
-        for (auto& instance : sentences) {
-            instance.sentence.resize(instance.real_len);
-	        instance.padding = 0;
-	        instance.rand = dis(gen);
-        }
-        // (1) perform a random shuffle that respects sentence len
-        std::sort(sentences.begin(), sentences.end());
-
-        // (2) add padding to instances in the same batch if necessary
-        CNLOG << "add padding to instances in batch";
-        {
-            auto padd_sym = corpus.vocab.stop_sent_tok;
-            auto itr = sentences.begin();
-            auto end = sentences.end();
-            while (itr != end) {
-                auto batch_itr = itr;
-                auto batch_end = batch_itr + std::min(batch_size,size_t(std::distance(itr,end))) - 1;
-                while (batch_itr->sentence.size() != batch_end->sentence.size()) {
-                    size_t to_add = batch_end->sentence.size() - batch_itr->sentence.size();
-                    for (size_t i = 0; i < to_add; i++) {
-                        batch_itr->sentence.push_back(padd_sym);
-                        batch_itr->padding++;
-                    }
-                    ++batch_itr;
-                }
-                itr = batch_end + 1;
-            }
-        }
+        CNLOG << "shuffle batches";
+        std::shuffle(batch_start.begin(),batch_start.end(), rng);
 
         CNLOG << "start training...";
-        auto start = sentences.begin();
-        auto last_report = sentences.begin();
-        auto itr = sentences.begin();
-        auto end = sentences.end();
+        auto last_report = 0;
         std::vector<float> window_loss(20);
         std::vector<float> window_predictions(20);
-        while (itr != end) {
-            auto batch_end = itr + std::min(batch_size,size_t(std::distance(itr,end)));
-            auto actual_batch_size = std::distance(itr,batch_end);
+        for (size_t i = 0; i < batch_start.size(); i++) {
+            auto batch_itr = sentences.begin() + batch_start[i].first;
+            auto batch_end = batch_itr + batch_start[i].second;
+            auto actual_batch_size = std::distance(batch_itr,batch_end);
 
             dynet::ComputationGraph cg;
             auto train_start = std::chrono::high_resolution_clock::now();
-            auto loss_tuple = build_train_graph_dynet(lm,cg,corpus, itr, batch_end,drop_out);
+            auto loss_tuple = build_train_graph_dynet(lm,cg,corpus, batch_itr, batch_end,drop_out);
             auto loss_expr = std::get<0>(loss_tuple);
             auto num_predictions = std::get<1>(loss_tuple);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
@@ -203,27 +196,26 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             window_predictions[std::distance(start, itr)%window_loss.size()] = num_predictions;
             auto instance_loss = loss_float / num_predictions;
             
-            auto hidden_vec = std::get<3>(loss_tuple);
-            auto loss_vec = std::get<2>(loss_tuple);
-            for(size_t i=0;i<hidden_vec.size();i++) {
-                auto& e = loss_vec[i];
-                cg.backward(e);
-                for (size_t j=0;j<=i;j++) {
-                    auto& hj = hidden_vec[j];
-                    auto grad = cg.get_gradient(hj);
-                    auto vec = dynet::as_vector(grad);
-                    CNLOG << "GRAD dE_" << i << " / dh_" << j << " = " << l2_norm(vec);
-                }
-            }
+            // auto hidden_vec = std::get<3>(loss_tuple);
+            // auto loss_vec = std::get<2>(loss_tuple);
+            // for(size_t i=0;i<hidden_vec.size();i++) {
+            //     auto& e = loss_vec[i];
+            //     cg.backward(e);
+            //     for (size_t j=0;j<=i;j++) {
+            //         auto& hj = hidden_vec[j];
+            //         auto grad = cg.get_gradient(hj);
+            //         auto vec = dynet::as_vector(grad);
+            //         CNLOG << "GRAD dE_" << i << " / dh_" << j << " = " << l2_norm(vec);
+            //     }
+            // }
             //cg.backward(loss_expr);
         
             trainer.update();
-            itr = batch_end;
             auto train_end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> train_diff = train_end - train_start;
             auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
-            if (std::distance(last_report, itr) >= report_interval || batch_end == end) {
+            if (std::distance(last_report, i) >= report_interval || i == batch_start.size() - 1) {
                 double percent = double(std::distance(start, itr)) / double(sentences.size()) * 100;
                 float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
                 float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
