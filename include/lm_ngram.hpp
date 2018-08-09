@@ -180,7 +180,6 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
     int64_t report_interval = args["report_interval"].as<size_t>();
-    auto drop_out = args["drop_out"].as<double>();
 
     CNLOG << "start training ngram lm";
     CNLOG << "\tepochs = " << num_epochs;
