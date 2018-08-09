@@ -85,10 +85,6 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
         actual_predictions += (instance->real_len - 1);
     }
 
-    for (size_t j = 0; j < batch_size; j++) {
-        auto instance = start + j;
-            CNLOG << corpus.vocab.print_sentence(instance->sentence);
-    }
     for (size_t i = 0; i < sentence_len - 1; ++i) {
         for (size_t j = 0; j < batch_size; j++) {
             auto instance = start + j;
