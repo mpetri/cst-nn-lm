@@ -59,7 +59,7 @@ double l2_norm(const std::vector<float>& u) {
 }
 
 template <class t_itr>
-std::tuple<dynet::Expression, size_t,std::vector<dynet::Expression>> 
+std::tuple<dynet::Expression, size_t,std::vector<dynet::Expression>,std::vector<dynet::Expression>> 
 build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const corpus_t& corpus, t_itr& start, t_itr& end,double drop_out)
 {
     size_t batch_size = std::distance(start, end);
@@ -74,7 +74,7 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
     lm.i_R = dynet::parameter(cg, lm.p_R);
     lm.i_bias = dynet::parameter(cg, lm.p_bias);
 
-    std::vector<dynet::Expression> errs;
+    std::vector<dynet::Expression> errs, hidden;
     // Set all inputs to the SOS symbol
     auto sos_tok = start->sentence.front();
     std::vector<uint32_t> current_tok(batch_size, sos_tok);
@@ -89,7 +89,7 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
 
     for (size_t j = 0; j < batch_size; j++) {
         auto instance = start + j;
-        CNLOG << corpus.vocab.print_sentence(instance->sentence);
+            CNLOG << corpus.vocab.print_sentence(instance->sentence);
     }
     for (size_t i = 0; i < sentence_len - 1; ++i) {
         for (size_t j = 0; j < batch_size; j++) {
@@ -101,6 +101,7 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
         auto i_x_t = dynet::lookup(cg, lm.p_c, current_tok);
         // Run one step of the rnn : y_t = RNN(x_t)
         auto i_y_t = lm.rnn.add_input(i_x_t);
+        hidden.push_back(i_y_t);
         // Project to the token space using an affine transform
         auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
         // Compute error for each member of the batch
@@ -111,7 +112,7 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
         current_tok = next_tok;
     }
     // Add all errors
-    return std::make_tuple(sum_batches(sum(errs)), actual_predictions , errs);
+    return std::make_tuple(sum_batches(sum(errs)), actual_predictions, errs, hidden);
 }
 
 template<class t_trainer>
@@ -201,15 +202,26 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             window_loss[std::distance(start, itr)%window_loss.size()] = loss_float;
             window_predictions[std::distance(start, itr)%window_loss.size()] = num_predictions;
             auto instance_loss = loss_float / num_predictions;
-            cg.backward(loss_expr);
-
-            auto error_expr = std::get<2>(loss_tuple);
-            for(size_t i=0;i<error_expr.size();i++) {
-                auto grad = cg.get_gradient(error_expr[i]);
+            
+            {
+                
+                auto grad = cg.get_gradient(std::get<3>(loss_tuple).front());
                 auto vec = dynet::as_vector(grad);
-                CNLOG << "GRAD AT " << i << ": " << l2_norm(vec);
             }
-        
+
+            auto hidden_expr = std::get<3>(loss_tuple);
+            auto loss_expr = std::get<2>(loss_tuple);
+            for(size_t i=0;i<hidden_expr.size();i++) {
+                auto& e = loss_expr[i];
+                cg.backward(e);
+                for (size_t j=0;j<=i;j++) {
+                    auto& hj = hidden_expr[j];
+                    auto grad = cg.get_gradient(hj);
+                    auto vec = dynet::as_vector(grad);
+                    CNLOG << "GRAD dE_" << i << " / dh_" << j << " = " << l2_norm(vec);
+                }
+            }
+            //cg.backward(loss_expr);
         
             trainer.update();
             itr = batch_end;
@@ -222,7 +234,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
                 float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
                 float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
                 last_report = itr;
-                CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
+                CNLOG << std::fixed << std::sextprecision(1) << std::floor(percent) << "% "
                       << std::distance(start, itr) << "/" << sentences.size()
                       << " batch_size = " << actual_batch_size
                       << " TIME = "<< time_per_instance << "ms/instance"
