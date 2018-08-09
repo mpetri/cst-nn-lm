@@ -191,10 +191,10 @@ struct corpus_t {
             for(size_t i=0;i<num_sentences;i++) {
                 auto start = sent_starts[i];
                 auto len = sent_lens[i];
-                for(size_t j=0;j<len-1;j++) {
+                for(size_t j=1;j<len-2;j++) {
                     train_out << vocab.inverse_lookup(text[start+j]) << " ";
                 }
-                train_out << vocab.inverse_lookup(text[start+len-1]) << "\n";
+                train_out << vocab.inverse_lookup(text[start+len-2]) << "\n";
             }
         }
 
@@ -203,10 +203,10 @@ struct corpus_t {
             for(size_t i=0;i<valid_corpus.num_sentences;i++) {
                 auto start = valid_corpus.sent_starts[i];
                 auto len = valid_corpus.sent_lens[i];
-                for(size_t j=0;j<len-1;j++) {
+                for(size_t j=1;j<len-2;j++) {
                     valid_out << vocab.inverse_lookup(valid_corpus.text[start+j]) << " ";
                 }
-                valid_out << vocab.inverse_lookup(valid_corpus.text[start+len-1]) << "\n";
+                valid_out << vocab.inverse_lookup(valid_corpus.text[start+len-2]) << "\n";
             }
         }
 
@@ -215,10 +215,10 @@ struct corpus_t {
             for(size_t i=0;i<test_corpus.num_sentences;i++) {
                 auto start = test_corpus.sent_starts[i];
                 auto len = test_corpus.sent_lens[i];
-                for(size_t j=0;j<len-1;j++) {
+                for(size_t j=1;j<len-2;j++) {
                     test_out << vocab.inverse_lookup(test_corpus.text[start+i]) << " ";
                 }
-                test_out << vocab.inverse_lookup(test_corpus.text[start+len-1]) << "\n";
+                test_out << vocab.inverse_lookup(test_corpus.text[start+len-2]) << "\n";
             }
         }
     }
