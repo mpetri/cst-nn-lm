@@ -151,6 +151,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
     CNLOG << "add padding to instances in batch";
     std::vector< std::pair<uint32_t,uint32_t> > batch_start;
     {
+        std::sort(sentences.begin(),sentences.end());
         auto padd_sym = corpus.vocab.eof_tok;
         auto start = sentences.begin();
         auto itr = sentences.begin();
