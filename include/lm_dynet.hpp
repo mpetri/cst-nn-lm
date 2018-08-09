@@ -192,8 +192,8 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             auto loss_expr = std::get<0>(loss_tuple);
             auto num_predictions = std::get<1>(loss_tuple);
             auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
-            window_loss[std::distance(start, itr)%window_loss.size()] = loss_float;
-            window_predictions[std::distance(start, itr)%window_loss.size()] = num_predictions;
+            window_loss[i%window_loss.size()] = loss_float;
+            window_predictions[i%window_loss.size()] = num_predictions;
             auto instance_loss = loss_float / num_predictions;
             
             // auto hidden_vec = std::get<3>(loss_tuple);
@@ -215,11 +215,11 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             std::chrono::duration<double> train_diff = train_end - train_start;
             auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
-            if (std::distance(last_report, i) >= report_interval || i == batch_start.size() - 1) {
+            if ( (i-last_report) >= report_interval || i == batch_start.size() - 1) {
                 double percent = double(std::distance(start, itr)) / double(sentences.size()) * 100;
                 float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
                 float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
-                last_report = itr;
+                last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
                       << std::distance(start, itr) << "/" << sentences.size()
                       << " batch_size = " << actual_batch_size
