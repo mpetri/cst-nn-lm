@@ -50,6 +50,8 @@
         "__functional_base_03": "cpp",
         "__tuple": "cpp",
         "limits": "cpp",
-        "tuple": "cpp"
+        "tuple": "cpp",
+        "future": "cpp",
+        "complex": "cpp"
     }
 }
