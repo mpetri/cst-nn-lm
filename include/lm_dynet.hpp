@@ -106,7 +106,7 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
         // Compute error for each member of the batch
         auto i_err = dynet::pickneglogsoftmax(i_r_t, next_tok);
 
-        auto grad = dynet::get_gradient(i_err);
+        auto grad = cg.get_gradient(i_err);
         auto vec = grad.as_vector();
         CNLOG << "GRAD AT " << i << ": " << l2_norm(vec);
 
