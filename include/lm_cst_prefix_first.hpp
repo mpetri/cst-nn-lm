@@ -115,8 +115,8 @@ void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args
 
             dynet::Expression loss;
             size_t num_predictions;
-            dynet::ComputationGraph cg;
             {
+                dynet::ComputationGraph cg;
                 float loss_float;
                 std::string batch_type = "S";
                 auto& cur_batch = one_hot_batches[cur_batch_id];
