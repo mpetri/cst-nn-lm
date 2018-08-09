@@ -155,7 +155,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
         while (itr != end) {
             auto batch_itr = itr;
             auto batch_end = batch_itr + std::min(batch_size,size_t(std::distance(itr,end))) - 1;
-            batch_start.emplace_back( (uint32_t) std::distance(start,itr) , (uint32_t) std::distance(itr,batch_end) );
+            batch_start.emplace_back( (uint32_t) std::distance(start,itr) , (uint32_t) std::distance(itr,batch_end+1) );
             while (batch_itr->sentence.size() != batch_end->sentence.size()) {
                 size_t to_add = batch_end->sentence.size() - batch_itr->sentence.size();
                 for (size_t i = 0; i < to_add; i++) {
