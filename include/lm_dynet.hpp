@@ -51,7 +51,7 @@ struct instance_t {
 
 template <class t_itr>
 std::tuple<dynet::Expression, size_t> 
-build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg, t_itr& start, t_itr& end,double drop_out)
+build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const corpus_t& corpus, t_itr& start, t_itr& end,double drop_out)
 {
     size_t batch_size = std::distance(start, end);
     size_t sentence_len = start->sentence.size();
@@ -78,6 +78,10 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg, t_itr& s
         actual_predictions += (instance->real_len - 1);
     }
 
+    for (size_t j = 0; j < batch_size; j++) {
+        auto instance = start + j;
+        CNLOG << corputs.vocab.print_sentence(instance->sentence);
+    }
     for (size_t i = 0; i < sentence_len - 1; ++i) {
         for (size_t j = 0; j < batch_size; j++) {
             auto instance = start + j;
@@ -92,6 +96,10 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg, t_itr& s
         auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
         // Compute error for each member of the batch
         auto i_err = dynet::pickneglogsoftmax(i_r_t, next_tok);
+
+        auto grad = dynet::get_gradient(i_err);
+        CNLOG << "GRAD AT " << i << ": " << grad;
+
         errs.push_back(i_err);
         // Change input
         current_tok = next_tok;
