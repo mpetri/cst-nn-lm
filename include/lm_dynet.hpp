@@ -99,7 +99,7 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
         auto i_x_t = dynet::lookup(cg, lm.p_c, current_tok);
         // Run one step of the rnn : y_t = RNN(x_t)
         auto i_y_t = lm.rnn.add_input(i_x_t);
-        hidden.push_back(i_y_t);
+        // hidden.push_back(i_y_t);
         // Project to the token space using an affine transform
         auto i_r_t = lm.i_bias + lm.i_R * i_y_t;
         // Compute error for each member of the batch
