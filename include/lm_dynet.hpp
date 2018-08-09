@@ -184,49 +184,51 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             auto batch_end = batch_itr + batch_start[i].second;
             auto actual_batch_size = std::distance(batch_itr,batch_end);
 
-            dynet::ComputationGraph cg;
-            auto train_start = std::chrono::high_resolution_clock::now();
-            auto loss_tuple = build_train_graph_dynet(lm,cg,corpus, batch_itr, batch_end,drop_out);
-            auto loss_expr = std::get<0>(loss_tuple);
-            auto num_predictions = std::get<1>(loss_tuple);
-            auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
-            window_loss[i%window_loss.size()] = loss_float;
-            window_predictions[i%window_loss.size()] = num_predictions;
-            auto instance_loss = loss_float / num_predictions;
-            cg.backward(loss_expr);
+            {
+                dynet::ComputationGraph cg;
+                auto train_start = std::chrono::high_resolution_clock::now();
+                auto loss_tuple = build_train_graph_dynet(lm,cg,corpus, batch_itr, batch_end,drop_out);
+                auto loss_expr = std::get<0>(loss_tuple);
+                auto num_predictions = std::get<1>(loss_tuple);
+                auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
+                window_loss[i%window_loss.size()] = loss_float;
+                window_predictions[i%window_loss.size()] = num_predictions;
+                auto instance_loss = loss_float / num_predictions;
+                cg.backward(loss_expr);
 
-            // auto hidden_vec = std::get<3>(loss_tuple);
-            // auto loss_vec = std::get<2>(loss_tuple);
-            // for(size_t i=0;i<hidden_vec.size();i++) {
-            //     auto& e = loss_vec[i];
-            //     cg.backward(e);
-            //     for (size_t j=0;j<=i;j++) {
-            //         auto& hj = hidden_vec[j];
-            //         auto grad = cg.get_gradient(hj);
-            //         auto vec = dynet::as_vector(grad);
-            //         CNLOG << "GRAD dE_" << i << " / dh_" << j << " = " << l2_norm(vec);
-            //     }
-            // }
-            //cg.backward(loss_expr);
+                // auto hidden_vec = std::get<3>(loss_tuple);
+                // auto loss_vec = std::get<2>(loss_tuple);
+                // for(size_t i=0;i<hidden_vec.size();i++) {
+                //     auto& e = loss_vec[i];
+                //     cg.backward(e);
+                //     for (size_t j=0;j<=i;j++) {
+                //         auto& hj = hidden_vec[j];
+                //         auto grad = cg.get_gradient(hj);
+                //         auto vec = dynet::as_vector(grad);
+                //         CNLOG << "GRAD dE_" << i << " / dh_" << j << " = " << l2_norm(vec);
+                //     }
+                // }
+                //cg.backward(loss_expr);
 
-            trainer.update();
-            auto train_end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> train_diff = train_end - train_start;
-            auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
+                trainer.update();
+                auto train_end = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> train_diff = train_end - train_start;
+                auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
-            if ( int64_t(i-last_report) >= report_interval || i == batch_start.size() - 1) {
-                double percent = double(i+1) / double(batch_start.size()) * 100;
-                float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
-                float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
-                last_report = i;
-                CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
-                      << i+1 << "/" << batch_start.size()
-                      << " batch_size = " << actual_batch_size
-                      << " TIME = "<< time_per_instance << "ms/instance"
-                      << " slen = " << batch_itr->sentence.size()
-                      << " num_predictions = " << num_predictions
-                      << " ppl = " << exp(instance_loss)
-                      << " avg-ppl = " << exp(wloss / wpred);
+                if ( int64_t(i-last_report) >= report_interval || i == batch_start.size() - 1) {
+                    double percent = double(i+1) / double(batch_start.size()) * 100;
+                    float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
+                    float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
+                    last_report = i;
+                    CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
+                        << i+1 << "/" << batch_start.size()
+                        << " batch_size = " << actual_batch_size
+                        << " TIME = "<< time_per_instance << "ms/instance"
+                        << " slen = " << batch_itr->sentence.size()
+                        << " num_predictions = " << num_predictions
+                        << " ppl = " << exp(instance_loss)
+                        << " avg-ppl = " << exp(wloss / wpred);
+                }
             }
 
             if(i == next_dev) {
