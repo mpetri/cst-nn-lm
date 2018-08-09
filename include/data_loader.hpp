@@ -308,12 +308,13 @@ struct data_loader {
                     corpus.num_duplicates++;
                 }
             } else {
-                    corpus.sent_starts.push_back(corpus.text.size());
-                    for(auto& tok : sentence) {
-                        corpus.text.push_back(tok);
-                    }
-                    corpus.num_oov += num_oov;
-                    corpus.num_sentences++;
+                corpus.sent_starts.push_back(corpus.text.size());
+                for(auto& tok : sentence) {
+                    corpus.text.push_back(tok);
+                }
+                corpus.num_oov += num_oov;
+                corpus.num_sentences++;
+                corpus.sent_lens.push_back(sentence.size());
             }
         }
         corpus.num_tokens = corpus.text.size();
