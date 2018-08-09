@@ -180,10 +180,12 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
     int64_t report_interval = args["report_interval"].as<size_t>();
+    auto drop_out = args["drop_out"].as<double>();
 
-    CNLOG << "start training dynet lm";
+    CNLOG << "start training ngram lm";
     CNLOG << "\tepochs = " << num_epochs;
     CNLOG << "\tbatch_size = " << batch_size;
+    CNLOG << "\tdrop_out = " << drop_out;
 
     auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
 
@@ -202,88 +204,108 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
 
     CNLOG << "number of sentences = " << sentences.size();
     trainer.clip_threshold = trainer.clip_threshold * batch_size;
-    std::mt19937 gen(constants::RAND_SEED);
-    std::uniform_int_distribution<> dis(0,100000000);
+    std::mt19937 rng(constants::RAND_SEED);
     double best_pplx = std::numeric_limits<double>::max();
+
+    // (2) add padding to instances in the same batch if necessary
+    CNLOG << "add padding to instances in batch";
+    std::vector< std::pair<uint32_t,uint32_t> > batch_start;
+    {
+        std::sort(sentences.begin(),sentences.end());
+        auto padd_sym = corpus.vocab.eof_tok;
+        auto start = sentences.begin();
+        auto itr = sentences.begin();
+        auto end = sentences.end();
+        while (itr != end) {
+            auto batch_itr = itr;
+            auto batch_end = batch_itr + std::min(batch_size,size_t(std::distance(itr,end))) - 1;
+            batch_start.emplace_back( (uint32_t) std::distance(start,itr) , (uint32_t) std::distance(itr,batch_end+1) );
+            while (batch_itr->sentence.size() != batch_end->sentence.size()) {
+                size_t to_add = batch_end->sentence.size() - batch_itr->sentence.size();
+                for (size_t i = 0; i < to_add; i++) {
+                    batch_itr->sentence.push_back(padd_sym);
+                    batch_itr->padding++;
+                }
+                ++batch_itr;
+            }
+            itr = batch_end + 1;
+        }
+    }
+
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
 
-        CNLOG << "shuffle sentences";
-        // (0) remove existing padding if necessary
-        for (auto& instance : sentences) {
-            instance.sentence.resize(instance.real_len);
-	        instance.padding = 0;
-	        instance.rand = dis(gen);
-        }
-        // (1) perform a random shuffle that respects sentence len
-        std::sort(sentences.begin(), sentences.end());
-
-        // (2) add padding to instances in the same batch if necessary
-        CNLOG << "add padding to instances in batch";
-        {
-            auto padd_sym = corpus.vocab.stop_sent_tok;
-            auto itr = sentences.begin();
-            auto end = sentences.end();
-            while (itr != end) {
-                auto batch_itr = itr;
-                auto batch_end = batch_itr + std::min(batch_size,size_t(std::distance(itr,end))) - 1;
-                while (batch_itr->sentence.size() != batch_end->sentence.size()) {
-                    size_t to_add = batch_end->sentence.size() - batch_itr->sentence.size();
-                    for (size_t i = 0; i < to_add; i++) {
-                        batch_itr->sentence.push_back(padd_sym);
-                        batch_itr->padding++;
-                    }
-                    ++batch_itr;
-                }
-                itr = batch_end + 1;
-            }
-        }
+        CNLOG << "shuffle batches";
+        std::shuffle(batch_start.begin(),batch_start.end(), rng);
 
         CNLOG << "start training...";
-        auto start = sentences.begin();
-        auto last_report = sentences.begin();
-        auto itr = sentences.begin();
-        auto end = sentences.end();
+        auto last_report = 0;
         std::vector<float> window_loss(20);
         std::vector<float> window_predictions(20);
-        while (itr != end) {
-            auto batch_end = itr + std::min(batch_size,size_t(std::distance(itr,end)));
-            auto actual_batch_size = std::distance(itr,batch_end);
+        size_t next_dev = 100;
+        for (size_t i = 0; i < batch_start.size(); i++) {
+            auto batch_itr = sentences.begin() + batch_start[i].first;
+            auto batch_end = batch_itr + batch_start[i].second;
+            auto actual_batch_size = std::distance(batch_itr,batch_end);
 
-            dynet::ComputationGraph cg;
-            auto train_start = std::chrono::high_resolution_clock::now();
-            auto loss_tuple = build_train_graph_ngram(lm,cg,corpus, itr, batch_end);
-            auto loss_expr = std::get<0>(loss_tuple);
-            auto num_predictions = std::get<1>(loss_tuple);
-            auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
-            window_loss[std::distance(start, itr)%window_loss.size()] = loss_float;
-            window_predictions[std::distance(start, itr)%window_loss.size()] = num_predictions;
-            auto instance_loss = loss_float / num_predictions;
-            cg.backward(loss_expr);
-            trainer.update();
-            itr = batch_end;
-            auto train_end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> train_diff = train_end - train_start;
-            auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
+            {
+                dynet::ComputationGraph cg;
+                auto train_start = std::chrono::high_resolution_clock::now();
+                auto loss_tuple = build_train_graph_ngram(lm,cg,corpus, batch_itr, batch_end);
+                auto loss_expr = std::get<0>(loss_tuple);
+                auto num_predictions = std::get<1>(loss_tuple);
+                auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
+                window_loss[i%window_loss.size()] = loss_float;
+                window_predictions[i%window_loss.size()] = num_predictions;
+                auto instance_loss = loss_float / num_predictions;
+                cg.backward(loss_expr);
 
-            if (std::distance(last_report, itr) >= report_interval || batch_end == end) {
-                double percent = double(std::distance(start, itr)) / double(sentences.size()) * 100;
-                float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
-                float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
-                last_report = itr;
-                CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
-                      << std::distance(start, itr) << "/" << sentences.size()
-                      << " batch_size = " << actual_batch_size
-                      << " TIME = "<< time_per_instance << "ms/instance"
-                      << " num_predictions = " << num_predictions
-                      << " ppl = " << exp(instance_loss)
-                      << " avg-ppl = " << exp(wloss / wpred);
+                // auto hidden_vec = std::get<3>(loss_tuple);
+                // auto loss_vec = std::get<2>(loss_tuple);
+                // for(size_t i=0;i<hidden_vec.size();i++) {
+                //     auto& e = loss_vec[i];
+                //     cg.backward(e);
+                //     for (size_t j=0;j<=i;j++) {
+                //         auto& hj = hidden_vec[j];
+                //         auto grad = cg.get_gradient(hj);
+                //         auto vec = dynet::as_vector(grad);
+                //         CNLOG << "GRAD dE_" << i << " / dh_" << j << " = " << l2_norm(vec);
+                //     }
+                // }
+                //cg.backward(loss_expr);
+
+                trainer.update();
+                auto train_end = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> train_diff = train_end - train_start;
+                auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
+
+                if ( int64_t(i-last_report) >= report_interval || i == batch_start.size() - 1) {
+                    double percent = double(i+1) / double(batch_start.size()) * 100;
+                    float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
+                    float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
+                    last_report = i;
+                    CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
+                        << i+1 << "/" << batch_start.size()
+                        << " batch_size = " << actual_batch_size
+                        << " TIME = "<< time_per_instance << "ms/instance"
+                        << " slen = " << batch_itr->sentence.size()
+                        << " num_predictions = " << num_predictions
+                        << " ppl = " << exp(instance_loss)
+                        << " avg-ppl = " << exp(wloss / wpred);
+                }
+            }
+
+            if( (i+1) == next_dev) {
+                CNLOG << "evalute dev pplx";
+                auto pplx = evaluate_pplx(lm, corpus, dev_corpus_file);
+                CNLOG << "epoch " << epoch << ". processed " << i+1 << " batches. evaluate dev pplx = " << pplx;
+                next_dev = next_dev * 2;
             }
         }
         CNLOG << "finish epoch " << epoch << ". compute dev pplx ";
-
         auto pplx = evaluate_pplx(lm, corpus, dev_corpus_file);
         CNLOG << "epoch " << epoch << " dev pplx = " << pplx;
+
 
         if( pplx < best_pplx && args.count("store") ) {
             CNLOG << "better dev pplx. store model";
