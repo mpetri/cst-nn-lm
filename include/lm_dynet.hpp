@@ -216,12 +216,12 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
             if ( (i-last_report) >= report_interval || i == batch_start.size() - 1) {
-                double percent = double(std::distance(start, itr)) / double(sentences.size()) * 100;
+                double percent = double(i+1) / double(batch_start.size()) * 100;
                 float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
                 float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
                 last_report = i;
                 CNLOG << std::fixed << std::setprecision(1) << std::floor(percent) << "% "
-                      << std::distance(start, itr) << "/" << sentences.size()
+                      << i+1 << "/" << batch_start.size()
                       << " batch_size = " << actual_batch_size
                       << " TIME = "<< time_per_instance << "ms/instance"
                       << " num_predictions = " << num_predictions
