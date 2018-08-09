@@ -192,6 +192,7 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
             window_loss[i%window_loss.size()] = loss_float;
             window_predictions[i%window_loss.size()] = num_predictions;
             auto instance_loss = loss_float / num_predictions;
+            cg.backward(loss_expr);
 
             // auto hidden_vec = std::get<3>(loss_tuple);
             // auto loss_vec = std::get<2>(loss_tuple);
