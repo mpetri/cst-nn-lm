@@ -69,7 +69,7 @@ struct language_model_ngram {
 
 template <class t_itr>
 std::tuple<dynet::Expression, size_t>
-build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,const corpus_t& corpus,t_itr start, t_itr end)
+build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,const corpus_t& corpus,t_itr start, t_itr end, double drop_out = 0.0)
 {
     size_t batch_size = std::distance(start, end);
     size_t sentence_len = start->sentence.size();
@@ -105,8 +105,17 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
         // Concact with the previous ngram-size-1 toks
         auto i_x_t = dynet::concatenate(context);
 
+        auto i_R = lm.i_R;
+        if(drop_out != 0.0) {
+            i_R = dynet::dropout(i_R,drop_out);
+        }
+
         // Project to the token space using an affine transform
-        auto i_r_t = dynet::rectify(lm.i_bias + lm.i_R * i_x_t);
+        auto i_r_t = dynet::rectify(lm.i_bias + i_R * i_x_t);
+
+        if(drop_out != 0.0) {
+            i_r_t = dynet::dropout(i_r_t,drop_out);
+        }
 
         // back to vocab space
         auto i_y_t = lm.i_bias_O + lm.i_O * i_r_t;
@@ -180,10 +189,12 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
     int64_t report_interval = args["report_interval"].as<size_t>();
+    double drop_out = args["drop_out"].as<double>();
 
     CNLOG << "start training ngram lm";
     CNLOG << "\tepochs = " << num_epochs;
     CNLOG << "\tbatch_size = " << batch_size;
+    CNLOG << "\tdrop_out = " << drop_out;
 
     auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
 
@@ -249,7 +260,7 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
             {
                 dynet::ComputationGraph cg;
                 auto train_start = std::chrono::high_resolution_clock::now();
-                auto loss_tuple = build_train_graph_ngram(lm,cg,corpus, batch_itr, batch_end);
+                auto loss_tuple = build_train_graph_ngram(lm,cg,corpus, batch_itr, batch_end, drop_out);
                 auto loss_expr = std::get<0>(loss_tuple);
                 auto num_predictions = std::get<1>(loss_tuple);
                 auto loss_float = dynet::as_scalar(cg.forward(loss_expr));
@@ -257,20 +268,6 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
                 window_predictions[i%window_loss.size()] = num_predictions;
                 auto instance_loss = loss_float / num_predictions;
                 cg.backward(loss_expr);
-
-                // auto hidden_vec = std::get<3>(loss_tuple);
-                // auto loss_vec = std::get<2>(loss_tuple);
-                // for(size_t i=0;i<hidden_vec.size();i++) {
-                //     auto& e = loss_vec[i];
-                //     cg.backward(e);
-                //     for (size_t j=0;j<=i;j++) {
-                //         auto& hj = hidden_vec[j];
-                //         auto grad = cg.get_gradient(hj);
-                //         auto vec = dynet::as_vector(grad);
-                //         CNLOG << "GRAD dE_" << i << " / dh_" << j << " = " << l2_norm(vec);
-                //     }
-                // }
-                //cg.backward(loss_expr);
 
                 trainer.update();
                 auto train_end = std::chrono::high_resolution_clock::now();

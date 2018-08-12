@@ -30,6 +30,7 @@ po::variables_map parse_args(int argc, char** argv)
         ("ngram_size", po::value<uint32_t>()->default_value(defaults::NGRAM_SIZE), "ngram size")
         ("input_dim", po::value<uint32_t>()->default_value(defaults::INPUT_DIM), "input embedding size")
         ("hidden_dim", po::value<uint32_t>()->default_value(defaults::HIDDEN_DIM), "hidden size")
+        ("drop_out", po::value<double>()->default_value(defaults::DROP_OUT), "drop out rate")
         ("epochs", po::value<size_t>()->default_value(defaults::EPOCHS), "num epochs")
         ("report_interval", po::value<size_t>()->default_value(defaults::REPORT_INTERVAL), "num epochs")
         ("batch_size", po::value<size_t>()->default_value(defaults::BATCH_SIZE), "batch size");
