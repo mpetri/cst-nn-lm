@@ -216,7 +216,7 @@ struct corpus_t {
                 auto start = test_corpus.sent_starts[i];
                 auto len = test_corpus.sent_lens[i];
                 for(size_t j=1;j<len-2;j++) {
-                    test_out << vocab.inverse_lookup(test_corpus.text[start+i]) << " ";
+                    test_out << vocab.inverse_lookup(test_corpus.text[start+j]) << " ";
                 }
                 test_out << vocab.inverse_lookup(test_corpus.text[start+len-2]) << "\n";
             }
