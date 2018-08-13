@@ -105,9 +105,8 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
         // Concact with the previous ngram-size-1 toks
         auto i_x_t = dynet::concatenate(context);
 
-        auto i_R = lm.i_R;
         if(drop_out != 0.0) {
-            i_R = dynet::dropout(i_R,drop_out);
+            i_x_t = dynet::dropout(i_x_t,drop_out);
         }
 
         // Project to the token space using an affine transform
