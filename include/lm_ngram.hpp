@@ -26,10 +26,17 @@ struct language_model_ngram {
     dynet::Parameter p_bias_O;
 
     dynet::Expression i_c;
-    dynet::Expression i_R;
-    dynet::Expression i_bias;
     dynet::Expression i_O;
     dynet::Expression i_bias_O;
+
+    dynet::Expression i_R;
+    dynet::Expression i_bias;
+    dynet::Expression i_R2;
+    dynet::Expression i_bias2;
+    dynet::Expression i_R3;
+    dynet::Expression i_bias3;
+    dynet::Expression i_R4;
+    dynet::Expression i_bias4;
 
     language_model_ngram(const vocab_t& vocab, args_t& args)
     {
@@ -45,9 +52,18 @@ struct language_model_ngram {
 
         // Add embedding parameters to the model
         p_c = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
+
         p_R = model.add_parameters({ HIDDEN_DIM,INPUT_DIM*NGRAM_SIZE });
-        p_O = model.add_parameters({ VOCAB_SIZE, HIDDEN_DIM });
+        p_R2 = model.add_parameters({ HIDDEN_DIM,INPUT_DIM*NGRAM_SIZE });
+        p_R3 = model.add_parameters({ HIDDEN_DIM,INPUT_DIM*NGRAM_SIZE });
+        p_R4 = model.add_parameters({ HIDDEN_DIM,INPUT_DIM*NGRAM_SIZE });
+
         p_bias = model.add_parameters({ HIDDEN_DIM });
+        p_bias2 = model.add_parameters({ HIDDEN_DIM });
+        p_bias3 = model.add_parameters({ HIDDEN_DIM });
+        p_bias4 = model.add_parameters({ HIDDEN_DIM });
+
+        p_O = model.add_parameters({ VOCAB_SIZE, HIDDEN_DIM });
         p_bias_O = model.add_parameters({ VOCAB_SIZE });
     }
 
@@ -76,6 +92,12 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
 
     lm.i_R = dynet::parameter(cg, lm.p_R);
     lm.i_bias = dynet::parameter(cg, lm.p_bias);
+    lm.i_R2 = dynet::parameter(cg, lm.p_R2);
+    lm.i_bias2 = dynet::parameter(cg, lm.p_bias2);
+    lm.i_R3 = dynet::parameter(cg, lm.p_R3);
+    lm.i_bias3 = dynet::parameter(cg, lm.p_bias3);
+    lm.i_R4 = dynet::parameter(cg, lm.p_R4);
+    lm.i_bias4 = dynet::parameter(cg, lm.p_bias4);
 
     lm.i_O = dynet::parameter(cg, lm.p_O);
     lm.i_bias_O = dynet::parameter(cg, lm.p_bias_O);
@@ -109,8 +131,13 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
             i_x_t = dynet::dropout(i_x_t,drop_out);
         }
 
+        auto i_l_t = lm.i_bias + lm.i_R * i_x_t;
+        auto i_l2_t = lm.i_bias2 + lm.i_R2 * i_l_t;
+        auto i_l3_t = lm.i_bias3 + lm.i_R3 * i_l2_t;
+        auto i_l4_t = lm.i_bias4 + lm.i_R4 * i_l3_t;
+
         // Project to the token space using an affine transform
-        auto i_r_t = dynet::rectify(lm.i_bias + i_R * i_x_t);
+        auto i_r_t = dynet::rectify(i_l4_t);
 
         if(drop_out != 0.0) {
             i_r_t = dynet::dropout(i_r_t,drop_out);
