@@ -20,8 +20,7 @@ struct language_model_ngram {
     uint32_t NGRAM_SIZE;
     uint32_t VOCAB_SIZE;
     dynet::LookupParameter p_c;
-    dynet::Parameter p_R;
-    dynet::Parameter p_bias;
+
     dynet::Parameter p_O;
     dynet::Parameter p_bias_O;
 
