@@ -62,9 +62,9 @@ struct language_model_ngram {
         p_c = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
 
         p_R = model.add_parameters({ HIDDEN_DIM,INPUT_DIM*NGRAM_SIZE });
-        p_R2 = model.add_parameters({ HIDDEN_DIM,INPUT_DIM*NGRAM_SIZE });
-        p_R3 = model.add_parameters({ HIDDEN_DIM,INPUT_DIM*NGRAM_SIZE });
-        p_R4 = model.add_parameters({ HIDDEN_DIM,INPUT_DIM*NGRAM_SIZE });
+        p_R2 = model.add_parameters({ HIDDEN_DIM,HIDDEN_DIM });
+        p_R3 = model.add_parameters({ HIDDEN_DIM,HIDDEN_DIM });
+        p_R4 = model.add_parameters({ HIDDEN_DIM,HIDDEN_DIM });
 
         p_bias = model.add_parameters({ HIDDEN_DIM });
         p_bias2 = model.add_parameters({ HIDDEN_DIM });
