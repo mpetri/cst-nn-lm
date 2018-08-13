@@ -47,7 +47,7 @@ struct vocab_t {
         eof_tok = add_token("<eof>");
         stop_sent_tok = add_token("</s>");
         start_sent_tok = add_token("<s>");
-        unk_tok = add_token("<unk>");
+        unk_tok = add_token("<unkown>");
         padding_tok = eof_tok;
     }
 
