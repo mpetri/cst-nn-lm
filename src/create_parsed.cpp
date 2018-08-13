@@ -53,8 +53,8 @@ int main(int argc, char** argv)
     auto dev_corpus_file = args["path"].as<std::string>() + "/" + constants::DEV_FILE;
     auto test_corpus_file = args["path"].as<std::string>() + "/" + constants::TEST_FILE;
     
-    auto dev_corpus = data_loader::parse_file(corpus.vocab, dev_corpus_file);
-    auto test_corpus = data_loader::parse_file(corpus.vocab, test_corpus_file);
+    auto dev_corpus = data_loader::parse_file(corpus.vocab, dev_corpus_file, false);
+    auto test_corpus = data_loader::parse_file(corpus.vocab, test_corpus_file, false);
 
     CNLOG << "store parsed data";
     auto out_path = args["opath"].as<std::string>();
