@@ -140,16 +140,28 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
         }
 
         auto i_l_t = lm.i_bias + lm.i_R * i_x_t;
-        auto i_l2_t = lm.i_bias2 + lm.i_R2 * i_l_t;
-        auto i_l3_t = lm.i_bias3 + lm.i_R3 * i_l2_t;
-        auto i_l4_t = lm.i_bias4 + lm.i_R4 * i_l3_t;
 
-        // Project to the token space using an affine transform
-        auto i_r_t = dynet::rectify(i_l4_t);
+        if(drop_out != 0.0) {
+            i_l_t = dynet::dropout(i_l_t,drop_out);
+        }
 
-        // if(drop_out != 0.0) {
-        //     i_r_t = dynet::dropout(i_r_t,drop_out);
-        // }
+        auto i_l2_t = dynet::rectify(lm.i_bias2 + lm.i_R2 * i_l_t);
+
+        if(drop_out != 0.0) {
+            i_l2_t = dynet::dropout(i_l2_t,drop_out);
+        }
+
+        auto i_l3_t = dynet::rectify(lm.i_bias3 + lm.i_R3 * i_l2_t);
+
+        if(drop_out != 0.0) {
+            i_l3_t = dynet::dropout(i_l3_t,drop_out);
+        }
+
+        auto i_r_t = dynet::rectify(lm.i_bias4 + lm.i_R4 * i_l3_t);
+
+        if(drop_out != 0.0) {
+            i_r_t = dynet::dropout(i_r_t,drop_out);
+        }
 
         // back to vocab space
         auto i_y_t = lm.i_bias_O + lm.i_O * i_r_t;
