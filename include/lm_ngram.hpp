@@ -147,9 +147,9 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
         // Project to the token space using an affine transform
         auto i_r_t = dynet::rectify(i_l4_t);
 
-        if(drop_out != 0.0) {
-            i_r_t = dynet::dropout(i_r_t,drop_out);
-        }
+        // if(drop_out != 0.0) {
+        //     i_r_t = dynet::dropout(i_r_t,drop_out);
+        // }
 
         // back to vocab space
         auto i_y_t = lm.i_bias_O + lm.i_O * i_r_t;
