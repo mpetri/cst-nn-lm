@@ -174,7 +174,7 @@ evaluate_pplx(language_model_ngram& lm, const corpus_t& corpus, std::string file
 {
     double loss = 0.0;
     double predictions = 0;
-    auto test_corpus = data_loader::parse_file(corpus.vocab, file);
+    auto test_corpus = data_loader::parse_file(corpus.vocab, file,false);
     boost::progress_display show_progress(test_corpus.num_sentences);
     std::vector<instance_t> sents;
     for (size_t i = 0; i < test_corpus.num_sentences; i++) {
