@@ -34,6 +34,7 @@ struct language_model_ngram {
         INPUT_DIM = args["input_dim"].as<uint32_t>();
         HIDDEN_DIM = args["hidden_dim"].as<uint32_t>();
         LAYERS = args["layers"].as<uint32_t>();
+        NGRAM_SIZE = args["ngram_size"].as<uint32_t>();
         VOCAB_SIZE = vocab.size();
         CNLOG << "LM-ngram parameters ";
         CNLOG << "\tngram_size = " << NGRAM_SIZE;
