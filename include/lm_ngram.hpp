@@ -19,58 +19,39 @@ struct language_model_ngram {
     uint32_t HIDDEN_DIM;
     uint32_t NGRAM_SIZE;
     uint32_t VOCAB_SIZE;
+    uint32_t LAYERS;
+
     dynet::LookupParameter p_c;
 
     dynet::Parameter p_O;
     dynet::Parameter p_bias_O;
 
-    dynet::Parameter p_R;
-    dynet::Parameter p_bias;
-    dynet::Parameter p_R2;
-    dynet::Parameter p_bias2;
-    dynet::Parameter p_R3;
-    dynet::Parameter p_bias3;
-    dynet::Parameter p_R4;
-    dynet::Parameter p_bias4;
-
-    dynet::Expression i_c;
-    dynet::Expression i_O;
-    dynet::Expression i_bias_O;
-
-    dynet::Expression i_R;
-    dynet::Expression i_bias;
-    dynet::Expression i_R2;
-    dynet::Expression i_bias2;
-    dynet::Expression i_R3;
-    dynet::Expression i_bias3;
-    dynet::Expression i_R4;
-    dynet::Expression i_bias4;
+    std::vector<dynet::Parameter> p_R;
+    std::vector<dynet::Parameter> p_bias;
 
     language_model_ngram(const vocab_t& vocab, args_t& args)
     {
         INPUT_DIM = args["input_dim"].as<uint32_t>();
         HIDDEN_DIM = args["hidden_dim"].as<uint32_t>();
-        NGRAM_SIZE = args["ngram_size"].as<uint32_t>();
+        LAYERS = args["layers"].as<uint32_t>();
         VOCAB_SIZE = vocab.size();
         CNLOG << "LM-ngram parameters ";
         CNLOG << "\tngram_size = " << NGRAM_SIZE;
         CNLOG << "\tinput_dim = " << INPUT_DIM;
         CNLOG << "\thidden_dim = " << HIDDEN_DIM;
         CNLOG << "\tvocab_size = " << VOCAB_SIZE;
+        CNLOG << "\tlayers = " << LAYERS;
 
         // Add embedding parameters to the model
         p_c = model.add_lookup_parameters(VOCAB_SIZE, { INPUT_DIM });
 
-        p_R = model.add_parameters({ HIDDEN_DIM,INPUT_DIM*NGRAM_SIZE });
-        p_R2 = model.add_parameters({ HIDDEN_DIM,HIDDEN_DIM });
-        p_R3 = model.add_parameters({ HIDDEN_DIM,HIDDEN_DIM });
-        p_R4 = model.add_parameters({ HIDDEN_DIM,HIDDEN_DIM });
-
-        p_bias = model.add_parameters({ HIDDEN_DIM });
-        p_bias2 = model.add_parameters({ HIDDEN_DIM });
-        p_bias3 = model.add_parameters({ HIDDEN_DIM });
-        p_bias4 = model.add_parameters({ HIDDEN_DIM });
-
+        p_R.push_back(model.add_parameters({ HIDDEN_DIM,INPUT_DIM*NGRAM_SIZE }));
+        p_bias.push_back(model.add_parameters({ HIDDEN_DIM }));
+        for(uint32_t i=1;i<LAYERS;i++) {
+            p_R.push_back(model.add_parameters({ HIDDEN_DIM,HIDDEN_DIM }));
+            p_bias.push_back(model.add_parameters({ HIDDEN_DIM }));
+        }
+        
         p_O = model.add_parameters({ VOCAB_SIZE, HIDDEN_DIM });
         p_bias_O = model.add_parameters({ VOCAB_SIZE });
     }
@@ -98,17 +79,15 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
     size_t batch_size = std::distance(start, end);
     size_t sentence_len = start->sentence.size();
 
-    lm.i_R = dynet::parameter(cg, lm.p_R);
-    lm.i_bias = dynet::parameter(cg, lm.p_bias);
-    lm.i_R2 = dynet::parameter(cg, lm.p_R2);
-    lm.i_bias2 = dynet::parameter(cg, lm.p_bias2);
-    lm.i_R3 = dynet::parameter(cg, lm.p_R3);
-    lm.i_bias3 = dynet::parameter(cg, lm.p_bias3);
-    lm.i_R4 = dynet::parameter(cg, lm.p_R4);
-    lm.i_bias4 = dynet::parameter(cg, lm.p_bias4);
+    std::vector<dynet::Expression> i_R;
+    std::vector<dynet::Expression> i_bias;
+    for(size_t i=0;i<lm.p_R.size();i++) {
+        i_R.push_back(dynet::parameter(cg, lm.p_R[i]));
+        i_bias.push_back(dynet::parameter(cg, lm.p_bias[i]));
+    }
 
-    lm.i_O = dynet::parameter(cg, lm.p_O);
-    lm.i_bias_O = dynet::parameter(cg, lm.p_bias_O);
+    auto i_O = dynet::parameter(cg, lm.p_O);
+    auto i_bias_O = dynet::parameter(cg, lm.p_bias_O);
 
     std::vector<dynet::Expression> errs;
     // Set all inputs to the SOS symbol
@@ -135,36 +114,22 @@ build_train_graph_ngram(language_model_ngram& lm,dynet::ComputationGraph& cg,con
         // Concact with the previous ngram-size-1 toks
         auto i_x_t = dynet::concatenate(context);
 
+        // input drop_out?
         if(drop_out != 0.0) {
             i_x_t = dynet::dropout(i_x_t,drop_out);
         }
 
-        auto i_l_t = lm.i_bias + lm.i_R * i_x_t;
-
-        if(drop_out != 0.0) {
-            i_l_t = dynet::dropout(i_l_t,drop_out);
-        }
-
-        auto i_l2_t = dynet::rectify(lm.i_bias2 + lm.i_R2 * i_l_t);
-
-        if(drop_out != 0.0) {
-            i_l2_t = dynet::dropout(i_l2_t,drop_out);
-        }
-
-        auto i_l3_t = dynet::rectify(lm.i_bias3 + lm.i_R3 * i_l2_t);
-
-        if(drop_out != 0.0) {
-            i_l3_t = dynet::dropout(i_l3_t,drop_out);
-        }
-
-        auto i_r_t = dynet::rectify(lm.i_bias4 + lm.i_R4 * i_l3_t);
-
-        if(drop_out != 0.0) {
-            i_r_t = dynet::dropout(i_r_t,drop_out);
+        // go through the layers
+        auto i_r_t = i_x_t;
+        for(uint32_t i=0;i<lm.LAYERS;i++) {
+            i_r_t = dynet::rectify(i_bias[i] + i_R[i] * i_r_t);
+            if(drop_out != 0.0) {
+                i_r_t = dynet::dropout(i_r_t,drop_out);
+            }
         }
 
         // back to vocab space
-        auto i_y_t = lm.i_bias_O + lm.i_O * i_r_t;
+        auto i_y_t = i_bias_O + i_O * i_r_t;
 
         // Compute error for each member of the batch
         auto i_err = dynet::pickneglogsoftmax(i_y_t, next_tok);
