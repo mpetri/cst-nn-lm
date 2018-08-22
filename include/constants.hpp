@@ -11,8 +11,9 @@ size_t EPOCHS = 20;
 size_t BATCH_SIZE = 32;
 size_t THREADS = 16;
 size_t THRESHOLD = 10;
-size_t REPORT_INTERVAL = 8192;
+int64_t REPORT_INTERVAL = 1;
 double DROP_OUT = 0.5;
+double LEARNING_RATE = 0.001;
 }
 
 namespace constants {

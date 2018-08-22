@@ -16,7 +16,7 @@ void train_cst_rand(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
     auto drop_out = args["drop_out"].as<double>();
-    int64_t report_interval = args["report_interval"].as<size_t>();
+    int64_t report_interval = defaults::REPORT_INTERVAL;
 
     CNLOG << "start training cst sentence lm with rand batch order";
     CNLOG << "\tepochs = " << num_epochs;

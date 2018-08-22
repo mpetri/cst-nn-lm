@@ -111,11 +111,11 @@ build_train_graph_dynet(language_model& lm,dynet::ComputationGraph& cg,const cor
 }
 
 template<class t_trainer>
-void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_trainer& trainer)
+void train_one_hot(language_model& lm,const corpus_t& corpus, args_t& args,t_trainer& trainer)
 {
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
-    int64_t report_interval = args["report_interval"].as<size_t>();
+    int64_t report_interval = defaults::REPORT_INTERVAL;
     auto drop_out = args["drop_out"].as<double>();
 
     CNLOG << "start training dynet lm";
@@ -195,20 +195,6 @@ void train_dynet_lm(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
                 window_predictions[i%window_loss.size()] = num_predictions;
                 auto instance_loss = loss_float / num_predictions;
                 cg.backward(loss_expr);
-
-                // auto hidden_vec = std::get<3>(loss_tuple);
-                // auto loss_vec = std::get<2>(loss_tuple);
-                // for(size_t i=0;i<hidden_vec.size();i++) {
-                //     auto& e = loss_vec[i];
-                //     cg.backward(e);
-                //     for (size_t j=0;j<=i;j++) {
-                //         auto& hj = hidden_vec[j];
-                //         auto grad = cg.get_gradient(hj);
-                //         auto vec = dynet::as_vector(grad);
-                //         CNLOG << "GRAD dE_" << i << " / dh_" << j << " = " << l2_norm(vec);
-                //     }
-                // }
-                //cg.backward(loss_expr);
 
                 trainer.update();
                 auto train_end = std::chrono::high_resolution_clock::now();

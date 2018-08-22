@@ -20,11 +20,9 @@ po::variables_map parse_args(int argc, char** argv)
         ("help", "produce help message")
         ("path", po::value<std::string>()->required(), "data path")
         ("num_sents", po::value<uint32_t>()->default_value(defaults::MAX_NUM_SENTS), "number of sentences to train on. (prefix)")
-        ("load", po::value<std::string>(), "load model instead of constructing one")
-        ("store", po::value<std::string>(), "store model after construction")
-        ("optimizer", po::value<std::string>(), "optimizer type: SGD or Adam")
+        ("file", po::value<std::string>(), "load/store model if it exists")
         ("type", po::value<std::string>()->required(), "lm type")
-        ("lr", po::value<double>()->default_value(0.0001), "learning rate")
+        ("lr", po::value<double>()->default_value(defaults::LEARNING_RATE), "learning rate")
         ("test", "test only. no train.")
         ("vocab_size", po::value<uint32_t>()->default_value(defaults::VOCAB_SIZE), "vocab size")
         ("layers", po::value<uint32_t>()->default_value(defaults::LAYERS), "layers of the rnn")
@@ -32,7 +30,6 @@ po::variables_map parse_args(int argc, char** argv)
         ("hidden_dim", po::value<uint32_t>()->default_value(defaults::HIDDEN_DIM), "hidden size")
         ("epochs", po::value<size_t>()->default_value(defaults::EPOCHS), "num epochs")
         ("drop_out", po::value<double>()->default_value(defaults::DROP_OUT), "drop out rate")
-        ("report_interval", po::value<size_t>()->default_value(defaults::REPORT_INTERVAL), "num epochs")
         ("batch_size", po::value<size_t>()->default_value(defaults::BATCH_SIZE), "batch size");
     // clang-format on
 
@@ -71,39 +68,21 @@ int main(int argc, char** argv)
     auto lm_type = args["type"].as<std::string>();
     language_model lm(corpus.vocab,args);
 
-    if( args.count("load") ) {
-        auto lm_file_path = args["load"].as<std::string>();
+    if( args.count("file") ) {
+        auto lm_file_path = args["file"].as<std::string>();
         CNLOG << "load language model from " << lm_file_path;
         lm.load(lm_file_path);
     }
 
-    dynet::Trainer* trainer = nullptr;
     double learning_rate = args["lr"].as<double>();
-    if(args.count("optimizer") != 0) {
-        auto opt_type = args["optimizer"].as<std::string>();
-        if(opt_type == "SGD") {
-            trainer = new SimpleSGDTrainer(lm.model,learning_rate);
-        }
-        if(opt_type == "Adam") {
-            trainer = new dynet::AdamTrainer(lm.model, learning_rate, 0.9, 0.999, 1e-8);
-        }
-    } else {
-        trainer = new dynet::AdamTrainer(lm.model, learning_rate, 0.9, 0.999, 1e-8);
-    }
+    dynet::AdamTrainer trainer(lm.model, learning_rate, 0.9, 0.999, 1e-8);
 
     if(args.count("test") == 0) {
-        CNLOG << "create language model";
-
+        CNLOG << "train language model";
         if(lm_type == "one_hot") {
-            train_dynet_lm(lm,corpus, args,*trainer);
-        } else if(lm_type == "cst_rand") {
-            train_cst_rand(lm,corpus, args,*trainer);
-        } else if(lm_type == "cst_sent_pfirst_sort") {
-            train_cst_sent_prefix_first(lm,corpus, args,*trainer);
-        } else if(lm_type == "cst_sent_seq") {
-            train_cst_sent_seq(lm,corpus, args,*trainer);
+            train_one_hot(lm,corpus, args,trainer);
         } else {
-            CNLOG << "ERROR: incorrect lm type. options are: standard, cst_sent, cst_sent_pfirst, cst_sent_seq";
+            CNLOG << "ERROR: incorrect lm type. options are: one_hot, ";
             exit(EXIT_FAILURE);
         }
     }
@@ -113,6 +92,5 @@ int main(int argc, char** argv)
     auto pplx = evaluate_pplx(lm, corpus, test_corpus_file);
     CNLOG << "test pplx = " << pplx;
 
-    delete trainer;
-    return 0;
+    return EXIT_SUCCESS;
 }
