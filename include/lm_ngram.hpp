@@ -261,9 +261,9 @@ void train_ngram_onehot(language_model_ngram& lm,const corpus_t& corpus, args_t&
 
         CNLOG << "start training...";
         auto last_report = 0;
-        std::vector<float> window_loss(64);
-        std::vector<float> window_predictions(64);
-        size_t next_dev = 100;
+        std::vector<float> window_loss(constants::WINDOW_AVG);
+        std::vector<float> window_predictions(constants::WINDOW_AVG);
+        size_t next_dev = 100 + ceil(log2(batch_start.size()));
         for (size_t i = 0; i < batch_start.size(); i++) {
             auto batch_itr = sentences.begin() + batch_start[i].first;
             auto batch_end = batch_itr + batch_start[i].second;

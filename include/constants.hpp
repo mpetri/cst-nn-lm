@@ -18,4 +18,5 @@ double DROP_OUT = 0.5;
 namespace constants {
 size_t MAX_SENTENCE_LEN = 128;
 size_t RAND_SEED = 12345;
+size_t WINDOW_AVG = 128;
 }
