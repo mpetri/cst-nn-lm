@@ -176,8 +176,8 @@ void train_one_hot(language_model& lm,const corpus_t& corpus, args_t& args,t_tra
 
         CNLOG << "start training...";
         auto last_report = 0;
-        std::vector<float> window_loss(20);
-        std::vector<float> window_predictions(20);
+        std::vector<float> window_loss(constants::WINDOW_AVG);
+        std::vector<float> window_predictions(constants::WINDOW_AVG);
         size_t next_dev = 100;
         for (size_t i = 0; i < batch_start.size(); i++) {
             auto batch_itr = sentences.begin() + batch_start[i].first;
@@ -201,7 +201,7 @@ void train_one_hot(language_model& lm,const corpus_t& corpus, args_t& args,t_tra
                 std::chrono::duration<double> train_diff = train_end - train_start;
                 auto time_per_instance = train_diff.count() / actual_batch_size * 1000.0;
 
-                if ( int64_t(i-last_report) >= report_interval || i == batch_start.size() - 1) {
+                if ( int64_t(i-last_report+1) >= report_interval || i == batch_start.size() - 1) {
                     double percent = double(i+1) / double(batch_start.size()) * 100;
                     float wloss = std::accumulate(window_loss.begin(),window_loss.end(), 0.0);
                     float wpred = std::accumulate(window_predictions.begin(),window_predictions.end(), 0.0);
