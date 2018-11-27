@@ -43,8 +43,8 @@ void train_cst_seq(language_model& lm,const corpus_t& corpus, args_t& args,t_tra
     std::sort(prefix_batches.begin(),prefix_batches.end());
     double best_pplx = std::numeric_limits<double>::max();
 
-    std::vector<float> window_loss(20);
-    std::vector<float> window_predictions(20);
+    std::vector<float> window_loss(constants::WINDOW_AVG);
+    std::vector<float> window_predictions(constants::WINDOW_AVG);
     for (size_t epoch = 1; epoch <= num_epochs; epoch++) {
         CNLOG << "start prefix epoch " << epoch << "/" << num_epochs;
 

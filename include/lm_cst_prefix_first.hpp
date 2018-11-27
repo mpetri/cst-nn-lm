@@ -16,9 +16,9 @@ void train_cst_prefix_first(language_model& lm,const corpus_t& corpus, args_t& a
     auto num_epochs = args["epochs"].as<size_t>();
     auto batch_size = args["batch_size"].as<size_t>();
     auto drop_out = args["drop_out"].as<double>();
-    int64_t report_interval = args["report_interval"].as<size_t>();
+    int64_t report_interval = defaults::REPORT_INTERVAL;
 
-    CNLOG << "start training cst sentence lm";
+    CNLOG << "start training cst sentence lm prefix first";
     CNLOG << "\tepochs = " << num_epochs;
     CNLOG << "\tbatch_size = " << batch_size;
     CNLOG << "\tdrop_out = " << drop_out;
@@ -49,8 +49,8 @@ void train_cst_prefix_first(language_model& lm,const corpus_t& corpus, args_t& a
 
         size_t last_report = 0;
 
-        std::vector<float> window_loss(20);
-        std::vector<float> window_predictions(20);
+        std::vector<float> window_loss(constants::WINDOW_AVG);
+        std::vector<float> window_predictions(constants::WINDOW_AVG);
         size_t next_dev = 100;
         for(size_t i=0;i<pbatch_ids.size();i++) {
             auto train_start = std::chrono::high_resolution_clock::now();

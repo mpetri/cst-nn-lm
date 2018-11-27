@@ -43,8 +43,8 @@ void train_cst_rand(language_model& lm,const corpus_t& corpus, args_t& args,t_tr
         CNLOG << "start epoch " << epoch << "/" << num_epochs;
         std::shuffle(batch_ids.begin(),batch_ids.end(), rng);
 
-        std::vector<float> window_loss(20);
-        std::vector<float> window_predictions(20);
+        std::vector<float> window_loss(constants::WINDOW_AVG);
+        std::vector<float> window_predictions(constants::WINDOW_AVG);
         size_t last_report = 0;
         size_t next_dev = 100;
         for(size_t i=0;i<batch_ids.size();i++) {

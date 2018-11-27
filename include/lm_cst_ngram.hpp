@@ -49,8 +49,8 @@ void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args
 
         size_t last_report = 0;
 
-        std::vector<float> window_loss(20);
-        std::vector<float> window_predictions(20);
+        std::vector<float> window_loss(constants::WINDOW_AVG);
+        std::vector<float> window_predictions(constants::WINDOW_AVG);
         size_t next_dev = 100;
         for(size_t i=0;i<pbatch_ids.size();i++) {
             auto train_start = std::chrono::high_resolution_clock::now();
