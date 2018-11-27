@@ -122,7 +122,7 @@ void
 add_sentence(std::vector<sentence_t>& sentences,prefix_t& p,size_t tok,const cst_type& cst,const corpus_t& corpus)
 {
     if(tok != corpus.vocab.stop_sent_tok) {
-        size_t char_pos;
+        cst_type::size_type char_pos;
         auto leaf_node = cst.child(p.node,tok,char_pos);
         sentence_t s;
         s.prefix = p.prefix;

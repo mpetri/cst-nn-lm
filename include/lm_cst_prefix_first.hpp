@@ -8,7 +8,7 @@
 #include "lm_common.hpp"
 
 template<class t_trainer>
-void train_cst_sent_prefix_first(language_model& lm,const corpus_t& corpus, args_t& args,t_trainer& trainer)
+void train_cst_prefix_first(language_model& lm,const corpus_t& corpus, args_t& args,t_trainer& trainer)
 {
     CNLOG << "build or load CST";
     auto cst = build_or_load_cst(corpus, args);

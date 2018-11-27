@@ -21,7 +21,7 @@ po::variables_map parse_args(int argc, char** argv)
         ("path", po::value<std::string>()->required(), "data path")
         ("num_sents", po::value<uint32_t>()->default_value(defaults::MAX_NUM_SENTS), "number of sentences to train on. (prefix)")
         ("file", po::value<std::string>(), "load/store model if it exists")
-        ("type", po::value<std::string>()->required(), "lm type")
+        ("type", po::value<std::string>()->required(), "lm type (one_hot,cst_seq,cst_rand,cst_prefix_first)")
         ("lr", po::value<double>()->default_value(defaults::LEARNING_RATE), "learning rate")
         ("test", "test only. no train.")
         ("vocab_size", po::value<uint32_t>()->default_value(defaults::VOCAB_SIZE), "vocab size")
@@ -81,6 +81,12 @@ int main(int argc, char** argv)
         CNLOG << "train language model";
         if(lm_type == "one_hot") {
             train_one_hot(lm,corpus, args,trainer);
+        } else if(lm_type == "cst_rand") {
+            train_cst_rand(lm,corpus, args,trainer);
+        } else if(lm_type == "cst_seq") {
+            train_cst_seq(lm,corpus, args,trainer);
+        } else if(lm_type == "cst_prefix_first") {
+            train_cst_prefix_first(lm,corpus, args,trainer);
         } else {
             CNLOG << "ERROR: incorrect lm type. options are: one_hot, ";
             exit(EXIT_FAILURE);
